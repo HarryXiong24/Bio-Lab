@@ -6,16 +6,12 @@ using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-  quote
-    local iv = try
-      Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-    catch
-      b -> missing
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
     end
-    local el = $(esc(element))
-    global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-    el
-  end
 end
 
 # ╔═╡ eeba971b-c64e-4195-95ca-5cf2ae5ac590
@@ -52,16 +48,16 @@ md"""
 
 Provide the path to the main folder containing the raw DICOM files and segmentations. Then click submit.
 
-$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/limb")))
+$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/heart")))
 """
 
 # ╔═╡ a830eebb-faf8-492b-ac42-2109e5173482
 md"""
-## V1 & V2
+## V1
 """
 
 # ╔═╡ 87284291-da14-4a86-8af1-2dcd8d845eee
-function volume_paths(dcm, v1, v2)
+function volume_paths(dcm, v1)
 
   return PlutoUI.combine() do Child
 
@@ -70,9 +66,6 @@ function volume_paths(dcm, v1, v2)
       	Child(PlutoUI.TextField(60; default = "DICOM"))
       )""",
       md""" $(v1): $(
-      	Child(PlutoUI.TextField(60; default = "01"))
-      )""",
-      md""" $(v2): $(
       	Child(PlutoUI.TextField(60; default = "02"))
       )""",
     ]
@@ -88,7 +81,7 @@ function volume_paths(dcm, v1, v2)
 end
 
 # ╔═╡ 42ff7c1a-42ce-4b1c-b1c0-3d8882bd8340
-@bind volume_files confirm(volume_paths("Enter DICOM folder name", "Enter volume scan 1 folder name", "Enter volume scan 2 folder name"))
+@bind volume_files confirm(volume_paths("Enter DICOM folder name", "Enter volume scan 1 folder name"))
 
 # ╔═╡ c84f0933-8354-4f89-ab16-032cdebb1101
 volume_files
@@ -99,14 +92,8 @@ dicom_path = joinpath(root_path, volume_files[1])
 # ╔═╡ 185d08b1-a1f7-4bf2-b0c3-84af66dcc415
 path_v1 = joinpath(dicom_path, volume_files[2])
 
-# ╔═╡ 5e985484-17d3-47b9-b764-c0c714cc0df1
-path_v2 = joinpath(dicom_path, volume_files[3])
-
 # ╔═╡ baeb5520-a946-4ce5-9d66-c0407d47cca2
 dcms_v1 = dcmdir_parse(path_v1)
-
-# ╔═╡ 5e1c9271-f4cf-4bbf-bf66-e8f12debf08a
-dcms_v2 = dcmdir_parse(path_v2)
 
 # ╔═╡ 82a0af24-d4a9-461b-b054-90fe37fa61e5
 md"""
@@ -142,48 +129,145 @@ Input the name of the folder containing the segmentation(s) (default is `SEGMENT
 $(@bind segment_folder confirm(PlutoUI.TextField(60; default = "SEGMENT_dcm")))
 """
 
-# ╔═╡ 10b527a0-18d9-4d59-8556-fee3b2c90fe2
+# ╔═╡ 1aad87c8-82f1-4436-b5db-3b9a9cdfc3cb
 segmentation_root = joinpath(root_path, "SEGMENT_dcm")
 
 # ╔═╡ 9d76a68a-d983-41bb-90c8-02853fa5f37f
 md"""
-### Limb
+### Arata
 """
 
 # ╔═╡ bec6e715-47f9-42b4-9ce7-6df632b8ff54
 md"""
 **Enter Limb Segmentation Folder**
 
-Input the name of the folder containing the SureStart scans (default is `Limb_dcm`). Then click submit
+Input the name of the folder containing the SureStart scans (default is `AORTA_dcm`). Then click submit
 
-$(@bind limb_folder confirm(PlutoUI.TextField(60; default = "Limb_dcm")))
+$(@bind limb_folder confirm(PlutoUI.TextField(60; default = "AORTA_dcm")))
 """
 
-# ╔═╡ be43dea5-69a4-449c-9423-864c53e728c0
-limb_path = joinpath(segmentation_root, limb_folder)
+# ╔═╡ 7111f8f3-ba5f-4a38-9145-97190e68a93e
+arata_path = joinpath(segmentation_root, limb_folder)
 
-# ╔═╡ 320330e3-7309-48aa-ac4b-123e9c23795a
-dcms_limb = dcmdir_parse(limb_path)
+# ╔═╡ a71a2492-bbd8-4660-93d1-de5eb3f8c681
+dcms_arata = dcmdir_parse(arata_path)
 
-# ╔═╡ b458422d-0949-4581-9c68-9872ba67e26e
+# ╔═╡ 0e5ad727-5fd8-4316-abfb-90a6ad93efaa
 md"""
-### Femoral Artery
+### Left Myocardium
 """
 
-# ╔═╡ ca6f06be-b7e9-4cc8-8cc8-e2d72044e6b3
+# ╔═╡ e132b952-0319-4d34-94a1-6cb4882f5eb1
 md"""
-**Enter Femoral Artery Segmentation Folder**
+**Enter Left Myocardium Segmentation Folder**
 
-Input the name of the folder containing the SureStart scans (default is `FA_dcm`). Then click submit
+Input the name of the folder containing the SureStart scans (default is `LEFT_MYOCARDIUM_dcm`). Then click submit
 
-$(@bind fa_folder confirm(PlutoUI.TextField(60; default = "FA_dcm")))
+$(@bind lm_folder confirm(PlutoUI.TextField(60; default = "LEFT_MYOCARDIUM_dcm")))
 """
 
-# ╔═╡ 76557751-7e5b-4e12-ad1a-85689755ef75
-fa_path = joinpath(segmentation_root, fa_folder)
+# ╔═╡ 17522cca-6b42-4900-9622-6fe8b2174dfc
+lm_path = joinpath(segmentation_root, lm_folder)
 
-# ╔═╡ 21138ade-c322-4a04-8ba3-bf5acff03eea
-dcms_fa = dcmdir_parse(fa_path);
+# ╔═╡ 0dd9eb15-d7ec-41de-9b51-871410246076
+dcms_lm = dcmdir_parse(lm_path);
+
+# ╔═╡ c660c6ae-3632-4529-b062-b9439e3b3709
+md"""
+### Right Myocardium
+"""
+
+# ╔═╡ b9f940b3-f4b8-429e-b7e9-fb12e0bf09ac
+md"""
+**Enter Right Myocardium Segmentation Folder**
+
+Input the name of the folder containing the SureStart scans (default is `RIGHT_MYOCARDIUM_dcm`). Then click submit
+
+$(@bind rm_folder confirm(PlutoUI.TextField(60; default = "RIGHT_MYOCARDIUM_dcm")))
+"""
+
+# ╔═╡ a8d2b330-78d4-463a-93ee-dd293e50df4b
+rm_path = joinpath(segmentation_root, rm_folder)
+
+# ╔═╡ 8165b2fe-f26b-4594-bcd9-383379fcfe9d
+dcms_rm = dcmdir_parse(rm_path);
+
+# ╔═╡ d1ab2748-b597-4c3d-8682-2e97a3fba8a0
+md"""
+## Vessels
+"""
+
+# ╔═╡ 70e6df21-9838-4d17-9765-f5bb78f26633
+md"""
+**Enter Vessels Root Folder**
+
+Input the name of the folder containing the segmentation(s) (default is `VESSELS_dcm`). Then click submit
+
+$(@bind vessels_folder confirm(PlutoUI.TextField(60; default = "VESSELS_dcm")))
+"""
+
+# ╔═╡ 48badd5f-c486-40df-bddb-c8885e629336
+vessels_root = joinpath(root_path, "VESSELS_dcm")
+
+# ╔═╡ 2c907a9e-efe9-48d4-96e3-866318f657cf
+md"""
+### LAD
+"""
+
+# ╔═╡ e04cf80a-08d5-4ab3-af80-b1cbf4622219
+md"""
+**Enter Right Myocardium Segmentation Folder**
+
+Input the name of the folder containing the SureStart scans (default is `LAD`). Then click submit
+
+$(@bind lad_folder confirm(PlutoUI.TextField(60; default = "LAD")))
+"""
+
+# ╔═╡ 1456a54f-da58-43ae-bbbe-55cd2e4c1fb0
+lad_path = joinpath(vessels_root, lad_folder)
+
+# ╔═╡ dcd6620c-2924-49a4-95f8-1067381f4357
+dcms_lad = dcmdir_parse(lad_path);
+
+# ╔═╡ 5289fe3f-93f2-4c93-8e84-f18b2bd7abbd
+md"""
+### LCX
+"""
+
+# ╔═╡ 28af079e-9b15-4e68-91f2-f2db66f9d12e
+md"""
+**Enter Right Myocardium Segmentation Folder**
+
+Input the name of the folder containing the SureStart scans (default is `LCX`). Then click submit
+
+$(@bind lcx_folder confirm(PlutoUI.TextField(60; default = "LCX")))
+"""
+
+# ╔═╡ 25a2b22c-00c3-4064-af40-c82e708249db
+lcx_path = joinpath(vessels_root, lcx_folder)
+
+# ╔═╡ 421ee721-e661-4fa6-86a8-20eb036bb835
+dcms_lcx = dcmdir_parse(lcx_path);
+
+# ╔═╡ 4f570b2e-4351-4657-ad74-583f5decb238
+md"""
+### RCA
+"""
+
+# ╔═╡ 81908744-c519-4442-8b41-95eca9f23cd3
+md"""
+**Enter Right Myocardium Segmentation Folder**
+
+Input the name of the folder containing the SureStart scans (default is `RCA`). Then click submit
+
+$(@bind rca_folder confirm(PlutoUI.TextField(60; default = "RCA")))
+"""
+
+# ╔═╡ 63c3c750-ce4b-4838-af34-5a94b87dff16
+rca_path = joinpath(vessels_root, rca_folder)
+
+# ╔═╡ 9f8d5935-67ee-4131-8379-b8bb09b99e7d
+dcms_rca = dcmdir_parse(rca_path);
 
 # ╔═╡ d3ca2ccf-961e-4612-bfa3-c61dbc27dcbb
 md"""
@@ -192,13 +276,12 @@ md"""
 
 # ╔═╡ 37a39564-c811-4b64-a76d-6071062757b1
 md"""
-## V1 & V2
+## V1
 """
 
 # ╔═╡ 25541b4e-7c19-44e2-a5a6-27c0b373ea9a
 begin
   v1_arr = load_dcm_array(dcms_v1)
-  v2_arr = load_dcm_array(dcms_v2)
 end;
 
 # ╔═╡ 60ef5850-638a-4f89-b2be-63d151e2f690
@@ -214,61 +297,58 @@ let
   )
   heatmap!(v1_arr[:, :, z_vols], colormap=:grays)
 
-  ax = CairoMakie.Axis(
-    f[1, 2],
-    title="V2 (Contrast)",
-    titlesize=40,
-  )
-  heatmap!(v2_arr[:, :, z_vols], colormap=:grays)
+  # ax = CairoMakie.Axis(
+  #   f[1, 2],
+  #   title="V2 (Contrast)",
+  #   titlesize=40,
+  # )
+  # heatmap!(v2_arr[:, :, z_vols], colormap=:grays)
   f
 end
 
 # ╔═╡ 9ed4ce81-bcff-4279-b841-24675dc9f128
 md"""
-## Limb
+## Arata
 """
 
-# ╔═╡ f0dc9f93-3d74-41d3-a3e9-c8f8927248b6
-limb_arr = load_dcm_array(dcms_limb);
+# ╔═╡ 652ff74c-d8a7-475a-b8cc-3d7ead255226
+arata_arr = load_dcm_array(dcms_arata);
 
-# ╔═╡ 72bdc8ea-96f9-4535-ba01-f37e9930a54b
+# ╔═╡ 7466ea3c-e2ba-4cff-8ca7-5b155508e3c6
 begin
-  limb_mask = copy(limb_arr)
-  replace!(x -> x < -1000 ? 0 : x, limb_mask)
-  limb_mask = limb_mask[:, :, end:-1:1]
-  limb_mask = limb_mask .!= 0
+  arata_mask = copy(arata_arr)
+  replace!(x -> x < -1000 ? 0 : x, arata_mask)
+  arata_mask = arata_mask[:, :, end:-1:1]
+  arata_mask = arata_mask .!= 0
 end;
 
-# ╔═╡ d124f844-5079-4501-8eef-b54ce939e0a1
-@bind z_limb PlutoUI.Slider(axes(limb_mask, 3), show_value=true, default=size(limb_mask, 3) ÷ 2)
+# ╔═╡ 9a780ac2-e296-4080-8d72-f06d64a7e65f
+@bind z_arata PlutoUI.Slider(axes(arata_mask, 3), show_value=true, default=size(arata_mask, 3) ÷ 2)
 
-# ╔═╡ 13014114-37ba-4183-8660-2b5f7d3fa74f
+# ╔═╡ 4afa1c70-3c33-4057-bc5d-f8681a1a1438
 let
   f = Figure(resolution=(1200, 800))
   ax = Axis(
     f[1, 1],
-    title="Limb Mask",
+    title="Arata Mask",
     titlesize=40,
   )
-  heatmap!(limb_mask[:, :, z_limb], colormap=:grays)
+  heatmap!(arata_mask[:, :, z_arata], colormap=:grays)
 
   ax = Axis(
     f[1, 2],
-    title="Limb Mask Overlayed",
+    title="Arata Mask Overlayed",
     titlesize=40,
   )
-  heatmap!(v2_arr[:, :, z_limb], colormap=:grays)
-  heatmap!(limb_mask[:, :, z_limb], colormap=(:jet, 0.3))
+  heatmap!(v1_arr[:, :, z_arata], colormap=:grays)
+  heatmap!(arata_mask[:, :, z_arata], colormap=(:jet, 0.3))
   f
 end
 
-# ╔═╡ fc011ca2-572e-4f44-b078-095d788101e4
-pts_cartesian = findall(isone, limb_mask)
+# ╔═╡ 06e21f58-d074-48ec-895d-1b864f96afde
+pts_cartesian = findall(isone, arata_mask)
 
-# ╔═╡ 962c637f-5294-4dd0-a115-5b36dd922893
-typeof(pts_cartesian)
-
-# ╔═╡ 77b4adfb-0637-414a-a0e8-f4fb49c9695c
+# ╔═╡ f47640fc-39c3-4649-bfb3-ebffc4ab2503
 pts_matrix = getindex.(pts_cartesian, [1 2 3])
 
 # ╔═╡ 2a01a6c8-e4fe-483a-a304-712683abd901
@@ -295,80 +375,333 @@ end
 
 # ╔═╡ a2135aeb-81c2-4ac4-ad62-9409a941c18f
 md"""
-## Femoral Artery
+## Left Myocardium
 """
 
-# ╔═╡ 0814112e-a7bc-48b2-b5a9-9b8b0abfc387
-fa_arr = load_dcm_array(dcms_fa);
+# ╔═╡ fa9fc2d8-52d8-4fd5-9dfa-7cbff1df40d5
+lm_arr = load_dcm_array(dcms_lm);
 
-# ╔═╡ 0c8bdc4e-67f2-42f4-b40b-ddac9f96ff19
+# ╔═╡ 68435ab7-95d9-4b69-94e7-1941e4788384
 begin
-  fa_mask = copy(fa_arr)
-  replace!(x -> x < -1000 ? 0 : x, fa_mask)
-  fa_mask = fa_mask[:, :, end:-1:1]
-  fa_mask = fa_mask .!= 0
+  lm_mask = copy(lm_arr)
+  replace!(x -> x < -1000 ? 0 : x, lm_mask)
+  lm_mask = lm_mask[:, :, end:-1:1]
+  lm_mask = lm_mask .!= 0
 end;
 
-# ╔═╡ fc1279db-b5ce-46f0-a8fb-385e9eace71f
+# ╔═╡ dffbee2b-f904-4ce0-8e7d-acf49e76018d
 begin
-  fa_mask_erode = zeros(size(fa_mask))
-  for i in axes(fa_mask)
-    fa_mask_erode[:, :, i] = erode(fa_mask[:, :, i])
+  lm_mask_erode = zeros(size(lm_mask))
+  for i in 1:size(lm_mask, 3)
+    lm_mask_erode[:, :, i] = erode(lm_mask[:, :, i])
   end
 end
 
-# ╔═╡ 47a7aa2c-610e-4394-8ba0-cb902cb6ed42
-@bind z_fa PlutoUI.Slider(axes(fa_mask, 3), show_value=true, default=size(fa_mask, 3) ÷ 15)
+# ╔═╡ f8a45540-37d0-4aa9-8f1b-031e48d3956a
+@bind z_lm PlutoUI.Slider(axes(lm_mask, 3), show_value=true, default=size(lm_mask, 3) ÷ 15)
 
-# ╔═╡ 48246bdc-59e8-49aa-8785-03a064accbbd
+# ╔═╡ f0b631f7-9342-4401-ad2b-6e27e4c733df
 let
   f = Figure(resolution=(2200, 2200))
   ax = CairoMakie.Axis(
     f[1, 1],
-    title="Femoral Artery Mask",
+    title="Left Myocardium",
     titlesize=40,
   )
-  heatmap!(fa_mask[:, :, z_fa], colormap=:grays)
+  heatmap!(lm_mask[:, :, z_lm], colormap=:grays)
 
   ax = CairoMakie.Axis(
     f[1, 2],
-    title="Femoral Artery Mask Eroded",
+    title="Left Myocardium  Mask Eroded",
     titlesize=40,
   )
-  heatmap!(fa_mask_erode[:, :, z_fa], colormap=:grays)
+  heatmap!(lm_mask_erode[:, :, z_lm], colormap=:grays)
 
   ax = CairoMakie.Axis(
     f[2, 1],
-    title="Femoral Artery Mask Overlayed",
+    title="Left Myocardium Mask Overlayed",
     titlesize=40,
   )
-  heatmap!(v2_arr[:, :, z_fa], colormap=:grays)
-  heatmap!(fa_mask[:, :, z_fa], colormap=(:jet, 0.3))
+  heatmap!(v1_arr[:, :, z_lm], colormap=:grays)
+  heatmap!(lm_mask[:, :, z_lm], colormap=(:jet, 0.3))
 
   ax = CairoMakie.Axis(
     f[2, 2],
-    title="Femoral Artery Mask Eroded",
+    title="Left Myocardium  Mask Eroded",
     titlesize=40,
   )
-  heatmap!(v2_arr[:, :, z_fa], colormap=:grays)
-  heatmap!(fa_mask_erode[:, :, z_fa], colormap=(:jet, 0.3))
+  heatmap!(v1_arr[:, :, z_lm], colormap=:grays)
+  heatmap!(lm_mask_erode[:, :, z_lm], colormap=(:jet, 0.3))
+  f
+end
+
+# ╔═╡ dafc07a2-47a6-46e9-a19a-85f8b6dad425
+md"""
+## Right Myocardium
+"""
+
+# ╔═╡ db50e16a-e1c8-4f2d-9189-e62faa318a3d
+rm_arr = load_dcm_array(dcms_rm);
+
+# ╔═╡ 75880cc4-6eaf-45cf-becd-fef59e33dcbf
+begin
+  rm_mask = copy(rm_arr)
+  replace!(x -> x < -1000 ? 0 : x, rm_mask)
+  rm_mask = rm_mask[:, :, end:-1:1]
+  rm_mask = rm_mask .!= 0
+end;
+
+# ╔═╡ ffd55e13-0f10-43ca-b1ea-d5de4690884c
+begin
+  rm_mask_erode = zeros(size(rm_mask))
+  for i in 1:size(rm_mask, 3)
+    rm_mask_erode[:, :, i] = erode(rm_mask[:, :, i])
+  end
+end
+
+# ╔═╡ 9d612bd9-6b9c-4633-b7be-2a2069fa49b6
+@bind z_rm PlutoUI.Slider(axes(rm_mask, 3), show_value=true, default=size(rm_mask, 3) ÷ 15)
+
+# ╔═╡ bdd45ecf-b8ca-42f2-a172-c378e194fddc
+let
+  f = Figure(resolution=(2200, 2200))
+  ax = CairoMakie.Axis(
+    f[1, 1],
+    title="Right Myocardium",
+    titlesize=40,
+  )
+  heatmap!(rm_mask[:, :, z_rm], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[1, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(rm_mask_erode[:, :, z_rm], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[2, 1],
+    title="Right Myocardium Mask Overlayed",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_rm], colormap=:grays)
+  heatmap!(rm_mask[:, :, z_rm], colormap=(:jet, 0.3))
+
+  ax = CairoMakie.Axis(
+    f[2, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_rm], colormap=:grays)
+  heatmap!(rm_mask_erode[:, :, z_rm], colormap=(:jet, 0.3))
+  f
+end
+
+# ╔═╡ af46cfb5-02a1-4738-a7ce-5e52fd81571f
+md"""
+## Vessels
+"""
+
+# ╔═╡ 5b88ce61-57d7-4dff-b8b4-9f89f908d0b8
+md"""
+### LAD
+"""
+
+# ╔═╡ 8e499832-e534-4dd3-88a3-0bc91df3c9cb
+lad_arr = load_dcm_array(dcms_lad);
+
+# ╔═╡ 0c2bb318-bcb7-43f5-b445-7806eee4d8a5
+begin
+  lad_mask = copy(lad_arr)
+  replace!(x -> x < -1000 ? 0 : x, lad_mask)
+  lad_mask = lad_mask[:, :, end:-1:1]
+  lad_mask = lad_mask .!= 0
+end;
+
+# ╔═╡ 119b3a5f-213d-4a7c-88a0-904cd7889254
+begin
+  lad_mask_erode = zeros(size(lad_mask))
+  for i in 1:size(lad_mask, 3)
+    lad_mask_erode[:, :, i] = erode(lad_mask[:, :, i])
+  end
+end
+
+# ╔═╡ 8f5a8b87-4306-4ae0-9eb9-c581cd6285bb
+@bind z_lad PlutoUI.Slider(axes(lad_mask, 3), show_value=true, default=size(lad_mask, 3) ÷ 15)
+
+# ╔═╡ 36d37e61-af75-4d6a-af48-942e938b62e3
+let
+  f = Figure(resolution=(2200, 2200))
+  ax = CairoMakie.Axis(
+    f[1, 1],
+    title="Right Myocardium",
+    titlesize=40,
+  )
+  heatmap!(lad_mask[:, :, z_lad], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[1, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(lad_mask_erode[:, :, z_lad], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[2, 1],
+    title="Right Myocardium Mask Overlayed",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_lad], colormap=:grays)
+  heatmap!(lad_mask[:, :, z_lad], colormap=(:jet, 0.3))
+
+  ax = CairoMakie.Axis(
+    f[2, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_lad], colormap=:grays)
+  heatmap!(lad_mask_erode[:, :, z_lad], colormap=(:jet, 0.3))
+  f
+end
+
+# ╔═╡ ec9bd122-2bc2-4c9d-b48a-6e1c5deabbb0
+md"""
+### LCX
+"""
+
+# ╔═╡ f43d6411-9bb0-4803-998d-a69772698cd1
+lcx_arr = load_dcm_array(dcms_lcx);
+
+# ╔═╡ efccdd6f-eaeb-45a5-bd7c-381524379bb5
+begin
+  lcx_mask = copy(lcx_arr)
+  replace!(x -> x < -1000 ? 0 : x, lcx_mask)
+  lcx_mask = lcx_mask[:, :, end:-1:1]
+  lcx_mask = lcx_mask .!= 0
+end;
+
+# ╔═╡ d7fa3230-6191-40fd-90d2-2f9afefb143c
+begin
+  lcx_mask_erode = zeros(size(lcx_mask))
+  for i in 1:size(lcx_mask, 3)
+    lcx_mask_erode[:, :, i] = erode(lcx_mask[:, :, i])
+  end
+end
+
+# ╔═╡ c98bf3b3-ac18-4667-a0af-d6591ad50a5c
+@bind z_lcx PlutoUI.Slider(axes(lcx_mask, 3), show_value=true, default=size(lcx_mask, 3) ÷ 15)
+
+# ╔═╡ 20942174-f06e-4704-992a-cd5c17752f35
+let
+  f = Figure(resolution=(2200, 2200))
+  ax = CairoMakie.Axis(
+    f[1, 1],
+    title="Right Myocardium",
+    titlesize=40,
+  )
+  heatmap!(lcx_mask[:, :, z_lcx], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[1, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(lcx_mask_erode[:, :, z_lcx], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[2, 1],
+    title="Right Myocardium Mask Overlayed",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_lcx], colormap=:grays)
+  heatmap!(lcx_mask[:, :, z_lcx], colormap=(:jet, 0.3))
+
+  ax = CairoMakie.Axis(
+    f[2, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_lcx], colormap=:grays)
+  heatmap!(lcx_mask_erode[:, :, z_lcx], colormap=(:jet, 0.3))
+  f
+end
+
+# ╔═╡ 86298639-1937-489d-aeca-422c9b6b3e24
+md"""
+### RCA
+"""
+
+# ╔═╡ 2aea052e-b16b-4f71-a125-16dffba93425
+rca_arr = load_dcm_array(dcms_rca);
+
+# ╔═╡ 0c625654-a34c-4316-bd63-0c662378886e
+begin
+  rca_mask = copy(rca_arr)
+  replace!(x -> x < -1000 ? 0 : x, rca_mask)
+  rca_mask = rca_mask[:, :, end:-1:1]
+  rca_mask = rca_mask .!= 0
+end;
+
+# ╔═╡ c653ab42-27ec-4a51-b544-7a4e81f09c4b
+begin
+  rca_mask_erode = zeros(size(rca_mask))
+  for i in 1:size(rca_mask, 3)
+    rca_mask_erode[:, :, i] = erode(rca_mask[:, :, i])
+  end
+end
+
+# ╔═╡ c93d11ef-3057-4a89-917a-709c540b9169
+@bind z_rca PlutoUI.Slider(axes(rca_mask, 3), show_value=true, default=size(rca_mask, 3) ÷ 15)
+
+# ╔═╡ 5e961ce6-8f80-4c43-bb66-dd0af82d1f3c
+let
+  f = Figure(resolution=(2200, 2200))
+  ax = CairoMakie.Axis(
+    f[1, 1],
+    title="Right Myocardium",
+    titlesize=40,
+  )
+  heatmap!(rca_mask[:, :, z_rca], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[1, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(rca_mask_erode[:, :, z_rca], colormap=:grays)
+
+  ax = CairoMakie.Axis(
+    f[2, 1],
+    title="Right Myocardium Mask Overlayed",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_rca], colormap=:grays)
+  heatmap!(rca_mask[:, :, z_rca], colormap=(:jet, 0.3))
+
+  ax = CairoMakie.Axis(
+    f[2, 2],
+    title="Right Myocardium Mask Eroded",
+    titlesize=40,
+  )
+  heatmap!(v1_arr[:, :, z_rca], colormap=:grays)
+  heatmap!(rca_mask_erode[:, :, z_rca], colormap=(:jet, 0.3))
   f
 end
 
 # ╔═╡ 6bf5d4eb-423b-4c1c-870e-fe7850b23137
 md"""
-## Crop Arrays via Limb Mask
+## Crop Arrays via Arata Mask
 """
 
-# ╔═╡ fbc16d72-d17e-4a1b-ab38-531ef4dc9727
-bounding_box_indices = find_bounding_box(limb_mask; offset=(20, 20, 5))
+# ╔═╡ c4e52e97-db66-4798-a1e0-0a6d5b66bb9d
+bounding_box_indices = find_bounding_box(arata_mask; offset=(20, 20, 5))
 
-# ╔═╡ 993ca35e-9b88-4cbd-bdd9-79e9b01e0009
+# ╔═╡ d75d2a7c-a025-4642-a8bd-fc57577f9aa2
 begin
   v1_crop = crop_array(v1_arr, bounding_box_indices...)
-  v2_crop = crop_array(v2_arr, bounding_box_indices...)
-  limb_crop = crop_array(limb_mask, bounding_box_indices...)
-  fa_crop = crop_array(fa_mask_erode, bounding_box_indices...)
+  limb_crop = crop_array(arata_mask, bounding_box_indices...)
+  lm_crop = crop_array(lm_mask_erode, bounding_box_indices...)
+  rm_crop = crop_array(rm_mask_erode, bounding_box_indices...)
 end;
 
 # ╔═╡ d4e86abf-fb28-4aa9-aa84-307c974630ad
@@ -376,13 +709,13 @@ md"""
 # Registration
 """
 
-# ╔═╡ 24b1a95d-69fb-451a-90c5-d5ed61e56aeb
-v2_reg = register(v1_crop, v2_crop; num_iterations=10);
-
-# ╔═╡ f08a4ff7-cbbf-4681-a049-bfa451cf780a
+# ╔═╡ 131cc859-c8fe-43ba-a486-1ccb2d4c1392
 @bind z_reg PlutoUI.Slider(axes(v1_crop, 3), show_value=true, default=182)
 
-# ╔═╡ 049e8a67-6237-43c0-9adc-c5dfe7e4d03f
+# ╔═╡ 93534f57-c9ae-48d4-9a90-eaccdf8bf6a8
+reg = register(lm_crop, rm_crop; num_iterations=10);
+
+# ╔═╡ f2e34124-12df-498a-8632-9f4d34866248
 let
   f = Figure(resolution=(2200, 1400))
   ax = CairoMakie.Axis(
@@ -619,6 +952,7 @@ md"""
 """
 
 # ╔═╡ 140c1343-2a6e-4d4f-a3db-0d608d7e885c
+#=╠═╡
 if aif1_ready && aif2_ready
   header = dcms_v1[1].meta
   voxel_size = get_voxel_size(header)
@@ -634,13 +968,36 @@ if aif1_ready && aif2_ready
   perf_map = flow_map ./ organ_mass
   perf = (flow / organ_mass, std(perf_map[limb_crop]))
 end
+  ╠═╡ =#
 
 # ╔═╡ a2aeaa04-3097-4dd0-8bab-5c98b74514b3
+#=╠═╡
 if aif1_ready && aif2_ready
   @bind z_flow PlutoUI.Slider(axes(flow_map, 3), show_value=true, default=size(flow_map, 3) ÷ 2)
 end
+  ╠═╡ =#
+
+# ╔═╡ 283c0ee5-0321-4f5d-9792-d593f49cafc1
+#=╠═╡
+if aif1_ready && aif2_ready
+  let
+    f = Figure()
+    ax = CairoMakie.Axis(
+      f[1, 1],
+      title="Flow Map",
+    )
+    heatmap!(v2_reg[:, :, z_flow], colormap=:grays)
+    heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
+
+    Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
+      flipaxis=false)
+    f
+  end
+end
+  ╠═╡ =#
 
 # ╔═╡ f8f3dafc-0fa4-4d11-b301-89d20adf77f3
+#=╠═╡
 begin
   limb_crop_dilated = dilate(dilate(dilate(dilate(dilate(limb_crop)))))
   flow_map_nans = zeros(size(flow_map))
@@ -657,23 +1014,7 @@ begin
   end
   flow_map_nans
 end;
-
-# ╔═╡ 283c0ee5-0321-4f5d-9792-d593f49cafc1
-if aif1_ready && aif2_ready
-  let
-    f = Figure()
-    ax = CairoMakie.Axis(
-      f[1, 1],
-      title="Flow Map",
-    )
-    heatmap!(v2_reg[:, :, z_flow], colormap=:grays)
-    heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
-
-    Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
-      flipaxis=false)
-    f
-  end
-end
+  ╠═╡ =#
 
 # ╔═╡ 1befeeba-40bb-4310-8441-6609fc82dc21
 md"""
@@ -694,6 +1035,7 @@ col_names = [
 ]
 
 # ╔═╡ e79e2a10-78d0-4571-b601-daf9d164b0c9
+#=╠═╡
 if aif1_ready && aif2_ready
   col_vals = [
     perf[1],
@@ -707,11 +1049,14 @@ if aif1_ready && aif2_ready
     heart_rate,
   ]
 end
+  ╠═╡ =#
 
 # ╔═╡ a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
+#=╠═╡
 if aif1_ready && aif2_ready
   df = DataFrame(parameters=col_names, values=col_vals)
 end
+  ╠═╡ =#
 
 # ╔═╡ 2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 md"""
@@ -724,9 +1069,12 @@ md"""
 """
 
 # ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
+#=╠═╡
 flow_min, flow_max = minimum(flow_map), maximum(flow_map)
+  ╠═╡ =#
 
 # ╔═╡ 04330a9d-d2b5-4b54-8e82-42904bcf3ff1
+#=╠═╡
 let
   fig = Figure(resolution=(1200, 1000))
 
@@ -800,6 +1148,7 @@ let
   fig
   display(fig)
 end
+  ╠═╡ =#
 
 # ╔═╡ 97c601e0-7f20-4112-b526-4f1509ce168f
 md"""
@@ -883,61 +1232,102 @@ end
 # ╠═0129d839-fde4-46bf-a2e1-beb79fdd2cab
 # ╟─b4252854-a892-48d1-9c67-4b4ac3b74ded
 # ╟─6fa28ef7-8e95-43af-9ef1-9fb549590bf7
-# ╠═aa13d033-c4a1-455c-8fa2-5cfc5a51b9c2
-# ╟─a830eebb-faf8-492b-ac42-2109e5173482
-# ╟─42ff7c1a-42ce-4b1c-b1c0-3d8882bd8340
-# ╟─87284291-da14-4a86-8af1-2dcd8d845eee
+# ╟─aa13d033-c4a1-455c-8fa2-5cfc5a51b9c2
+# ╠═a830eebb-faf8-492b-ac42-2109e5173482
+# ╠═42ff7c1a-42ce-4b1c-b1c0-3d8882bd8340
+# ╠═87284291-da14-4a86-8af1-2dcd8d845eee
 # ╠═c84f0933-8354-4f89-ab16-032cdebb1101
 # ╠═26b7a474-0653-4ff4-9455-df1448623fee
 # ╠═185d08b1-a1f7-4bf2-b0c3-84af66dcc415
-# ╠═5e985484-17d3-47b9-b764-c0c714cc0df1
 # ╠═baeb5520-a946-4ce5-9d66-c0407d47cca2
-# ╠═5e1c9271-f4cf-4bbf-bf66-e8f12debf08a
 # ╟─82a0af24-d4a9-461b-b054-90fe37fa61e5
 # ╠═43c9c836-2492-431a-9664-d4f900279b2e
 # ╠═7f54d3c0-945e-4bc3-b2de-f37d93208963
 # ╠═0c7580e8-3e49-44bf-b53e-5070be62e722
 # ╟─795e6621-0df8-49e5-973a-ada9b37e451f
 # ╟─9e791737-a82f-4b07-b6da-fe8d4af1bfe1
-# ╠═10b527a0-18d9-4d59-8556-fee3b2c90fe2
+# ╠═1aad87c8-82f1-4436-b5db-3b9a9cdfc3cb
 # ╟─9d76a68a-d983-41bb-90c8-02853fa5f37f
 # ╟─bec6e715-47f9-42b4-9ce7-6df632b8ff54
-# ╠═be43dea5-69a4-449c-9423-864c53e728c0
-# ╠═320330e3-7309-48aa-ac4b-123e9c23795a
-# ╟─b458422d-0949-4581-9c68-9872ba67e26e
-# ╟─ca6f06be-b7e9-4cc8-8cc8-e2d72044e6b3
-# ╠═76557751-7e5b-4e12-ad1a-85689755ef75
-# ╠═21138ade-c322-4a04-8ba3-bf5acff03eea
+# ╠═7111f8f3-ba5f-4a38-9145-97190e68a93e
+# ╠═a71a2492-bbd8-4660-93d1-de5eb3f8c681
+# ╟─0e5ad727-5fd8-4316-abfb-90a6ad93efaa
+# ╠═e132b952-0319-4d34-94a1-6cb4882f5eb1
+# ╠═17522cca-6b42-4900-9622-6fe8b2174dfc
+# ╠═0dd9eb15-d7ec-41de-9b51-871410246076
+# ╠═c660c6ae-3632-4529-b062-b9439e3b3709
+# ╟─b9f940b3-f4b8-429e-b7e9-fb12e0bf09ac
+# ╠═a8d2b330-78d4-463a-93ee-dd293e50df4b
+# ╠═8165b2fe-f26b-4594-bcd9-383379fcfe9d
+# ╠═d1ab2748-b597-4c3d-8682-2e97a3fba8a0
+# ╟─70e6df21-9838-4d17-9765-f5bb78f26633
+# ╠═48badd5f-c486-40df-bddb-c8885e629336
+# ╠═2c907a9e-efe9-48d4-96e3-866318f657cf
+# ╠═e04cf80a-08d5-4ab3-af80-b1cbf4622219
+# ╠═1456a54f-da58-43ae-bbbe-55cd2e4c1fb0
+# ╠═dcd6620c-2924-49a4-95f8-1067381f4357
+# ╟─5289fe3f-93f2-4c93-8e84-f18b2bd7abbd
+# ╟─28af079e-9b15-4e68-91f2-f2db66f9d12e
+# ╠═25a2b22c-00c3-4064-af40-c82e708249db
+# ╠═421ee721-e661-4fa6-86a8-20eb036bb835
+# ╟─4f570b2e-4351-4657-ad74-583f5decb238
+# ╟─81908744-c519-4442-8b41-95eca9f23cd3
+# ╠═63c3c750-ce4b-4838-af34-5a94b87dff16
+# ╠═9f8d5935-67ee-4131-8379-b8bb09b99e7d
 # ╟─d3ca2ccf-961e-4612-bfa3-c61dbc27dcbb
-# ╟─37a39564-c811-4b64-a76d-6071062757b1
+# ╠═37a39564-c811-4b64-a76d-6071062757b1
 # ╠═25541b4e-7c19-44e2-a5a6-27c0b373ea9a
 # ╟─60ef5850-638a-4f89-b2be-63d151e2f690
 # ╟─9a7b1a51-90a2-472d-8809-0bbdee4afa1f
 # ╟─9ed4ce81-bcff-4279-b841-24675dc9f128
-# ╠═f0dc9f93-3d74-41d3-a3e9-c8f8927248b6
-# ╠═72bdc8ea-96f9-4535-ba01-f37e9930a54b
-# ╟─d124f844-5079-4501-8eef-b54ce939e0a1
-# ╟─13014114-37ba-4183-8660-2b5f7d3fa74f
-# ╠═fc011ca2-572e-4f44-b078-095d788101e4
-# ╠═962c637f-5294-4dd0-a115-5b36dd922893
-# ╠═77b4adfb-0637-414a-a0e8-f4fb49c9695c
+# ╠═652ff74c-d8a7-475a-b8cc-3d7ead255226
+# ╠═7466ea3c-e2ba-4cff-8ca7-5b155508e3c6
+# ╠═9a780ac2-e296-4080-8d72-f06d64a7e65f
+# ╠═4afa1c70-3c33-4057-bc5d-f8681a1a1438
+# ╠═06e21f58-d074-48ec-895d-1b864f96afde
+# ╠═f47640fc-39c3-4649-bfb3-ebffc4ab2503
 # ╟─2a01a6c8-e4fe-483a-a304-712683abd901
 # ╠═f6965577-c718-4a03-87b6-248818860f7d
 # ╟─25a72dd0-7435-4aa9-98b0-d8a6f5ea1eed
-# ╟─36be9348-d572-4fa5-86e5-6e529f2d7092
+# ╠═36be9348-d572-4fa5-86e5-6e529f2d7092
 # ╟─a2135aeb-81c2-4ac4-ad62-9409a941c18f
-# ╠═0814112e-a7bc-48b2-b5a9-9b8b0abfc387
-# ╠═0c8bdc4e-67f2-42f4-b40b-ddac9f96ff19
-# ╠═fc1279db-b5ce-46f0-a8fb-385e9eace71f
-# ╟─47a7aa2c-610e-4394-8ba0-cb902cb6ed42
-# ╟─48246bdc-59e8-49aa-8785-03a064accbbd
-# ╟─6bf5d4eb-423b-4c1c-870e-fe7850b23137
-# ╠═fbc16d72-d17e-4a1b-ab38-531ef4dc9727
-# ╠═993ca35e-9b88-4cbd-bdd9-79e9b01e0009
+# ╠═fa9fc2d8-52d8-4fd5-9dfa-7cbff1df40d5
+# ╠═68435ab7-95d9-4b69-94e7-1941e4788384
+# ╠═dffbee2b-f904-4ce0-8e7d-acf49e76018d
+# ╠═f8a45540-37d0-4aa9-8f1b-031e48d3956a
+# ╠═f0b631f7-9342-4401-ad2b-6e27e4c733df
+# ╟─dafc07a2-47a6-46e9-a19a-85f8b6dad425
+# ╠═db50e16a-e1c8-4f2d-9189-e62faa318a3d
+# ╠═75880cc4-6eaf-45cf-becd-fef59e33dcbf
+# ╠═ffd55e13-0f10-43ca-b1ea-d5de4690884c
+# ╠═9d612bd9-6b9c-4633-b7be-2a2069fa49b6
+# ╠═bdd45ecf-b8ca-42f2-a172-c378e194fddc
+# ╠═af46cfb5-02a1-4738-a7ce-5e52fd81571f
+# ╠═5b88ce61-57d7-4dff-b8b4-9f89f908d0b8
+# ╠═8e499832-e534-4dd3-88a3-0bc91df3c9cb
+# ╠═0c2bb318-bcb7-43f5-b445-7806eee4d8a5
+# ╠═119b3a5f-213d-4a7c-88a0-904cd7889254
+# ╠═8f5a8b87-4306-4ae0-9eb9-c581cd6285bb
+# ╠═36d37e61-af75-4d6a-af48-942e938b62e3
+# ╠═ec9bd122-2bc2-4c9d-b48a-6e1c5deabbb0
+# ╠═f43d6411-9bb0-4803-998d-a69772698cd1
+# ╠═efccdd6f-eaeb-45a5-bd7c-381524379bb5
+# ╠═d7fa3230-6191-40fd-90d2-2f9afefb143c
+# ╠═c98bf3b3-ac18-4667-a0af-d6591ad50a5c
+# ╠═20942174-f06e-4704-992a-cd5c17752f35
+# ╠═86298639-1937-489d-aeca-422c9b6b3e24
+# ╠═2aea052e-b16b-4f71-a125-16dffba93425
+# ╠═0c625654-a34c-4316-bd63-0c662378886e
+# ╠═c653ab42-27ec-4a51-b544-7a4e81f09c4b
+# ╠═c93d11ef-3057-4a89-917a-709c540b9169
+# ╠═5e961ce6-8f80-4c43-bb66-dd0af82d1f3c
+# ╠═6bf5d4eb-423b-4c1c-870e-fe7850b23137
+# ╠═c4e52e97-db66-4798-a1e0-0a6d5b66bb9d
+# ╠═d75d2a7c-a025-4642-a8bd-fc57577f9aa2
 # ╟─d4e86abf-fb28-4aa9-aa84-307c974630ad
-# ╠═24b1a95d-69fb-451a-90c5-d5ed61e56aeb
-# ╟─f08a4ff7-cbbf-4681-a049-bfa451cf780a
-# ╠═049e8a67-6237-43c0-9adc-c5dfe7e4d03f
+# ╠═131cc859-c8fe-43ba-a486-1ccb2d4c1392
+# ╠═93534f57-c9ae-48d4-9a90-eaccdf8bf6a8
+# ╠═f2e34124-12df-498a-8632-9f4d34866248
 # ╟─0fbad88e-7598-4416-ba4f-caab5af09bbb
 # ╟─c966dfc6-3117-4d76-9e12-129e05bbf68a
 # ╠═906f9427-4757-44d9-a957-2efd4b7f53f0
