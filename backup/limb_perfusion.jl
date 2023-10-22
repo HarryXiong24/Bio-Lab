@@ -458,19 +458,6 @@ md"""
 ## V2 (AIF)
 """
 
-# ╔═╡ 69bbc077-2523-47a1-8c48-b0dc5c8ef0c2
-# md"""
-# Select slice: $(@bind z2_aif PlutoUI.Slider(axes(v2_reg, 3), show_value = true))
-
-# Choose x location: $(@bind x2_aif PlutoUI.Slider(axes(v2_reg, 1), show_value = true, default = size(v2_reg, 1) ÷ 2))
-
-# Choose y location: $(@bind y2_aif PlutoUI.Slider(axes(v2_reg, 1), show_value = true, default = size(v2_reg, 1) ÷ 2))
-
-# Choose radius: $(@bind r2_aif PlutoUI.Slider(1:10, show_value = true))
-
-# Check box when ready: $(@bind aif2_ready PlutoUI.CheckBox())
-# """
-
 # ╔═╡ 0955548a-62a4-4523-a526-bd123092a03a
 md"""
 Select slice: $(@bind z2_aif PlutoUI.Slider(axes(v2_reg, 3), show_value = true, default = 59))
@@ -505,10 +492,20 @@ let
 end
 
 # ╔═╡ 6864be65-b474-4fa2-84a6-0f8c789e669d
-if aif1_ready && aif2_ready
-  aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
-  aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
-  aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+# This needs to be replaced by the femoral artery mask array
+# if aif1_ready && aif2_ready
+#   aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+#   aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
+#   aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+# end
+
+# ╔═╡ 0af6d8e7-d7d4-4345-b5ca-e1c6e0982a58
+fa_mean_intensity = mean(v2_reg[Bool.(fa_crop)])
+
+# ╔═╡ 022fc5c7-9488-4717-9fd5-5b3dec04bb88
+if aif1_ready
+    aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+    aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
 end
 
 # ╔═╡ 1e21f95a-bc8a-492f-9a56-820dd3b3d066
@@ -881,7 +878,7 @@ end
 # ╟─6fa28ef7-8e95-43af-9ef1-9fb549590bf7
 # ╠═aa13d033-c4a1-455c-8fa2-5cfc5a51b9c2
 # ╟─a830eebb-faf8-492b-ac42-2109e5173482
-# ╟─42ff7c1a-42ce-4b1c-b1c0-3d8882bd8340
+# ╠═42ff7c1a-42ce-4b1c-b1c0-3d8882bd8340
 # ╟─87284291-da14-4a86-8af1-2dcd8d845eee
 # ╠═c84f0933-8354-4f89-ab16-032cdebb1101
 # ╠═26b7a474-0653-4ff4-9455-df1448623fee
@@ -939,11 +936,12 @@ end
 # ╠═906f9427-4757-44d9-a957-2efd4b7f53f0
 # ╟─84ccac14-41a5-491f-a88d-d364c6d43a2f
 # ╟─5eb279b5-348f-4c00-bad2-c40f545739be
-# ╟─7f1b44c5-924b-4541-8fff-e1298f9a9ef0
-# ╠═69bbc077-2523-47a1-8c48-b0dc5c8ef0c2
-# ╟─0955548a-62a4-4523-a526-bd123092a03a
-# ╟─e9dad16b-07bc-4b87-be6b-959b078a5ba7
+# ╠═7f1b44c5-924b-4541-8fff-e1298f9a9ef0
+# ╠═0955548a-62a4-4523-a526-bd123092a03a
+# ╠═e9dad16b-07bc-4b87-be6b-959b078a5ba7
 # ╠═6864be65-b474-4fa2-84a6-0f8c789e669d
+# ╠═0af6d8e7-d7d4-4345-b5ca-e1c6e0982a58
+# ╠═022fc5c7-9488-4717-9fd5-5b3dec04bb88
 # ╟─1e21f95a-bc8a-492f-9a56-820dd3b3d066
 # ╟─0ba3a947-23be-49ca-ac2c-b0d295d096e9
 # ╠═61604f83-e5f3-4aed-ac0b-1c630d7a1d67
