@@ -492,10 +492,20 @@ let
 end
 
 # ╔═╡ 6864be65-b474-4fa2-84a6-0f8c789e669d
-if aif1_ready && aif2_ready
-  aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
-  aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
-  aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+# This needs to be replaced by the femoral artery mask array
+# if aif1_ready && aif2_ready
+#   aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+#   aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
+#   aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+# end
+
+# ╔═╡ 0af6d8e7-d7d4-4345-b5ca-e1c6e0982a58
+fa_mean_intensity = mean(v2_reg[Bool.(fa_crop)])
+
+# ╔═╡ 022fc5c7-9488-4717-9fd5-5b3dec04bb88
+if aif1_ready
+    aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+    aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
 end
 
 # ╔═╡ 1e21f95a-bc8a-492f-9a56-820dd3b3d066
@@ -930,6 +940,8 @@ end
 # ╠═0955548a-62a4-4523-a526-bd123092a03a
 # ╠═e9dad16b-07bc-4b87-be6b-959b078a5ba7
 # ╠═6864be65-b474-4fa2-84a6-0f8c789e669d
+# ╠═0af6d8e7-d7d4-4345-b5ca-e1c6e0982a58
+# ╠═022fc5c7-9488-4717-9fd5-5b3dec04bb88
 # ╟─1e21f95a-bc8a-492f-9a56-820dd3b3d066
 # ╟─0ba3a947-23be-49ca-ac2c-b0d295d096e9
 # ╠═61604f83-e5f3-4aed-ac0b-1c630d7a1d67
