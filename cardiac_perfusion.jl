@@ -311,7 +311,7 @@ end
 
 # ╔═╡ 9ed4ce81-bcff-4279-b841-24675dc9f128
 md"""
-## Arata
+## Aorta
 """
 
 # ╔═╡ 652ff74c-d8a7-475a-b8cc-3d7ead255226
@@ -376,6 +376,15 @@ let
   f
 end
 
+# ╔═╡ a63d08cd-348d-41f2-bba5-3faefcda8417
+ss_slice = ss_arr[:, :, 1];
+
+# ╔═╡ eacc9f1a-2ccb-4ff8-b3b1-53ccc77f5464
+ss_arr
+
+# ╔═╡ 9925edae-ed4f-45e7-9182-ceafb81064fc
+
+
 # ╔═╡ a2135aeb-81c2-4ac4-ad62-9409a941c18f
 md"""
 ## Left Myocardium
@@ -391,6 +400,15 @@ begin
   lm_mask = lm_mask[:, :, end:-1:1]
   lm_mask = lm_mask .!= 0
 end;
+
+# ╔═╡ fc6061ae-74df-46df-a4d1-e3b6ab6f6b80
+lm_slice_mask = lm_mask[:, :, 156];
+
+# ╔═╡ af204995-acfc-48bd-9fff-a2f1d6d9b6ae
+ss_slice[lm_slice_mask]
+
+# ╔═╡ 59cdf0ab-6645-4742-b8e8-52a678688f14
+mean(ss_slice[lm_slice_mask])
 
 # ╔═╡ dffbee2b-f904-4ce0-8e7d-acf49e76018d
 begin
@@ -701,10 +719,16 @@ bounding_box_indices = find_bounding_box(arata_mask; offset=(20, 20, 5))
 
 # ╔═╡ d75d2a7c-a025-4642-a8bd-fc57577f9aa2
 begin
-  v2_crop = crop_array(v2_arr, bounding_box_indices...)
-  arata_crop = crop_array(arata_mask, bounding_box_indices...)
-  lm_crop = crop_array(lm_mask_erode, bounding_box_indices...)
-  rm_crop = crop_array(rm_mask_erode, bounding_box_indices...)
+  # v2_crop = crop_array(v2_arr, bounding_box_indices...)
+  # arata_crop = crop_array(arata_mask, bounding_box_indices...)
+  # lm_crop = crop_array(lm_mask_erode, bounding_box_indices...)
+  # rm_crop = crop_array(rm_mask_erode, bounding_box_indices...)
+
+  v2_crop = copy(v2_arr)
+  arata_crop = copy(arata_mask)
+  lm_crop = copy(lm_mask)
+  rm_crop = copy(rm_mask)
+	
 end;
 
 # ╔═╡ d4e86abf-fb28-4aa9-aa84-307c974630ad
@@ -714,6 +738,9 @@ md"""
 
 # ╔═╡ 540ff842-04f9-42a8-9abb-ebb09b19f64b
 v2_reg = v2_crop
+
+# ╔═╡ 80772c28-ad20-4b1d-8f39-014f0ee01b32
+mean(v2_reg[lm_crop])
 
 # ╔═╡ 131cc859-c8fe-43ba-a486-1ccb2d4c1392
 # @bind z_reg PlutoUI.Slider(axes(v2_crop, 3), show_value=true, default=182)
@@ -780,49 +807,12 @@ let
   f
 end
 
-# ╔═╡ 7f1b44c5-924b-4541-8fff-e1298f9a9ef0
-md"""
-## V2 (AIF)
-"""
-
-# ╔═╡ 0955548a-62a4-4523-a526-bd123092a03a
-md"""
-Select slice: $(@bind z2_aif PlutoUI.Slider(axes(v2_reg, 3), show_value = true, default = 59))
-
-Choose x location: $(@bind x2_aif PlutoUI.Slider(axes(v2_reg, 1), show_value = true, default = 55))
-
-Choose y location: $(@bind y2_aif PlutoUI.Slider(axes(v2_reg, 1), show_value = true, default = 76))
-
-Choose radius: $(@bind r2_aif PlutoUI.Slider(1:10, show_value = true, default = 2))
-
-Check box when ready: $(@bind aif2_ready PlutoUI.CheckBox(default = true))
-"""
-
-# ╔═╡ e9dad16b-07bc-4b87-be6b-959b078a5ba7
-let
-  f = Figure()
-  ax = CairoMakie.Axis(
-    f[1, 1],
-    title="V2 AIF",
-  )
-  heatmap!(v2_reg[:, :, z2_aif], colormap=:grays)
-
-  # Draw circle using parametric equations
-  phi = 0:0.01:2π
-  circle_x = r2_aif .* cos.(phi) .+ x2_aif
-  circle_y = r2_aif .* sin.(phi) .+ y2_aif
-  lines!(circle_x, circle_y, label="Femoral Artery Mask (radius $r2_aif)", color=:red, linewidth=0.5)
-
-  axislegend(ax)
-
-  f
-end
-
 # ╔═╡ 6864be65-b474-4fa2-84a6-0f8c789e669d
-if aif1_ready && aif2_ready
+if aif1_ready
   aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
-  aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
-  aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+  # aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
+  # aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+  aif_vec_gamma = [aif_vec_ss...]
 end
 
 # ╔═╡ 1e21f95a-bc8a-492f-9a56-820dd3b3d066
@@ -836,7 +826,7 @@ md"""
 """
 
 # ╔═╡ 61604f83-e5f3-4aed-ac0b-1c630d7a1d67
-if aif1_ready && aif2_ready
+if aif1_ready
   time_vector_ss = scan_time_vector(dcms_ss)
   time_vector_ss_rel = time_vector_ss .- time_vector_ss[1]
 
@@ -845,7 +835,8 @@ if aif1_ready && aif2_ready
 
   delta_time = time_vector_v2[length(time_vector_v2)÷2] - time_vector_ss[end]
 
-  time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
+	time_vec_gamma = copy(time_vector_ss_rel)
+  # time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
 end
 
 # ╔═╡ e385d115-47e4-4a59-a6d0-6ea95455e901
@@ -854,7 +845,7 @@ md"""
 """
 
 # ╔═╡ e87721fa-5731-4a3e-bd8d-a17dc8fdeffc
-if aif1_ready && aif2_ready
+if aif1_ready
   # Upper and Lower Bounds
   lb = [-1000.0, 1000.0]
   ub = [-1000.0, 1000.0]
@@ -864,7 +855,7 @@ if aif1_ready && aif2_ready
 
   time_vec_end, aif_vec_end = time_vec_gamma[end], aif_vec_gamma[end]
 
-  fit = gamma_curve_fit(time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0; lower_bounds=lb, upper_bounds=ub)
+  fit = gamma_curve_fit(time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0)
   opt_params = fit.param
 end
 
@@ -872,7 +863,7 @@ end
 time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0
 
 # ╔═╡ fc43feee-9d9a-4af6-a76a-7dfbb927c0ae
-if aif1_ready && aif2_ready
+if aif1_ready
   x_fit = range(start=minimum(time_vec_gamma), stop=maximum(time_vec_gamma), length=500)
   y_fit = gamma(x_fit, opt_params, time_vec_end, aif_vec_end)
   dense_y_fit_adjusted = max.(y_fit .- baseline_hu, 0)
@@ -887,7 +878,7 @@ if aif1_ready && aif2_ready
 end
 
 # ╔═╡ c44b2487-bcd2-43f2-af89-2e3b0e1a54e8
-if aif1_ready && aif2_ready
+if aif1_ready
   let
     f = Figure()
     ax = Axis(
@@ -932,8 +923,8 @@ md"""
 """
 
 # ╔═╡ 140c1343-2a6e-4d4f-a3db-0d608d7e885c
-if aif1_ready && aif2_ready
-  header = dcms_v1[1].meta
+if aif1_ready
+  header = dcms_v2[1].meta
   voxel_size = get_voxel_size(header)
   heart_rate = round(1 / (mean(diff(time_vec_gamma)) / 60))
   tissue_rho = 1.053 # tissue density : g/cm^2
@@ -1242,7 +1233,7 @@ end
 # ╟─37a39564-c811-4b64-a76d-6071062757b1
 # ╠═25541b4e-7c19-44e2-a5a6-27c0b373ea9a
 # ╟─60ef5850-638a-4f89-b2be-63d151e2f690
-# ╠═9a7b1a51-90a2-472d-8809-0bbdee4afa1f
+# ╟─9a7b1a51-90a2-472d-8809-0bbdee4afa1f
 # ╟─9ed4ce81-bcff-4279-b841-24675dc9f128
 # ╠═652ff74c-d8a7-475a-b8cc-3d7ead255226
 # ╠═7466ea3c-e2ba-4cff-8ca7-5b155508e3c6
@@ -1254,6 +1245,13 @@ end
 # ╠═f6965577-c718-4a03-87b6-248818860f7d
 # ╟─25a72dd0-7435-4aa9-98b0-d8a6f5ea1eed
 # ╠═36be9348-d572-4fa5-86e5-6e529f2d7092
+# ╠═fc6061ae-74df-46df-a4d1-e3b6ab6f6b80
+# ╠═a63d08cd-348d-41f2-bba5-3faefcda8417
+# ╠═af204995-acfc-48bd-9fff-a2f1d6d9b6ae
+# ╠═59cdf0ab-6645-4742-b8e8-52a678688f14
+# ╠═80772c28-ad20-4b1d-8f39-014f0ee01b32
+# ╠═eacc9f1a-2ccb-4ff8-b3b1-53ccc77f5464
+# ╠═9925edae-ed4f-45e7-9182-ceafb81064fc
 # ╟─a2135aeb-81c2-4ac4-ad62-9409a941c18f
 # ╠═fa9fc2d8-52d8-4fd5-9dfa-7cbff1df40d5
 # ╠═68435ab7-95d9-4b69-94e7-1941e4788384
@@ -1284,8 +1282,8 @@ end
 # ╠═0c625654-a34c-4316-bd63-0c662378886e
 # ╠═c653ab42-27ec-4a51-b544-7a4e81f09c4b
 # ╠═c93d11ef-3057-4a89-917a-709c540b9169
-# ╠═5e961ce6-8f80-4c43-bb66-dd0af82d1f3c
-# ╠═6bf5d4eb-423b-4c1c-870e-fe7850b23137
+# ╟─5e961ce6-8f80-4c43-bb66-dd0af82d1f3c
+# ╟─6bf5d4eb-423b-4c1c-870e-fe7850b23137
 # ╠═c4e52e97-db66-4798-a1e0-0a6d5b66bb9d
 # ╠═d75d2a7c-a025-4642-a8bd-fc57577f9aa2
 # ╟─d4e86abf-fb28-4aa9-aa84-307c974630ad
@@ -1293,12 +1291,9 @@ end
 # ╠═131cc859-c8fe-43ba-a486-1ccb2d4c1392
 # ╠═f2e34124-12df-498a-8632-9f4d34866248
 # ╟─0fbad88e-7598-4416-ba4f-caab5af09bbb
-# ╠═c966dfc6-3117-4d76-9e12-129e05bbf68a
-# ╠═84ccac14-41a5-491f-a88d-d364c6d43a2f
+# ╟─c966dfc6-3117-4d76-9e12-129e05bbf68a
+# ╟─84ccac14-41a5-491f-a88d-d364c6d43a2f
 # ╟─5eb279b5-348f-4c00-bad2-c40f545739be
-# ╟─7f1b44c5-924b-4541-8fff-e1298f9a9ef0
-# ╠═0955548a-62a4-4523-a526-bd123092a03a
-# ╠═e9dad16b-07bc-4b87-be6b-959b078a5ba7
 # ╠═6864be65-b474-4fa2-84a6-0f8c789e669d
 # ╟─1e21f95a-bc8a-492f-9a56-820dd3b3d066
 # ╟─0ba3a947-23be-49ca-ac2c-b0d295d096e9

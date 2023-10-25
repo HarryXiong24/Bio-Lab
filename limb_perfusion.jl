@@ -504,8 +504,8 @@ fa_mean_intensity = mean(v2_reg[Bool.(fa_crop)])
 
 # ╔═╡ 022fc5c7-9488-4717-9fd5-5b3dec04bb88
 if aif1_ready
-    aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
-    aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
+  aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+  aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
 end
 
 # ╔═╡ 1e21f95a-bc8a-492f-9a56-820dd3b3d066
@@ -633,6 +633,9 @@ if aif1_ready && aif2_ready
   @bind z_flow PlutoUI.Slider(axes(flow_map, 3), show_value=true, default=size(flow_map, 3) ÷ 2)
 end
 
+# ╔═╡ 5f87cd17-41bb-47b9-ad16-50bce4d1d0ea
+limb_crop
+
 # ╔═╡ f8f3dafc-0fa4-4d11-b301-89d20adf77f3
 begin
   limb_crop_dilated = dilate(dilate(dilate(dilate(dilate(limb_crop)))))
@@ -662,6 +665,10 @@ if aif1_ready && aif2_ready
     heatmap!(v2_reg[:, :, z_flow], colormap=:grays)
     heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
 
+    # heatmap!(flow_map[:, :, z_flow], colormap=(:jet, 0.6))
+	# heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 0.6))
+	# heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 0.6))
+	  
     Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
       flipaxis=false)
     f
@@ -719,7 +726,10 @@ md"""
 # ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
 flow_min, flow_max = minimum(flow_map), maximum(flow_map)
 
-# ╔═╡ 04330a9d-d2b5-4b54-8e82-42904bcf3ff1
+# ╔═╡ 9f9a6203-e808-4b9d-8fd2-179b7720658f
+flow_map_nans
+
+# ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
 let
   fig = Figure(resolution=(1200, 1000))
 
@@ -756,6 +766,7 @@ let
     colormap[] = new_colormap
   end
 
+
   # render picture
   ax = GLMakie.Axis3(fig[4, 1:2];
     perspectiveness=perspectiveness_slice,
@@ -766,29 +777,29 @@ let
 
   GLMakie.volume!(ax, flow_map_nans;
     colormap=colormap,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
+    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
   GLMakie.volume!(ax, v2_reg;
-    colormap=:greys,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
+    colormap=colormap,
+    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  GLMakie.volume!(ax, v1_crop;
-    colormap=:greys,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
-    transparency=true
-  )
+  # GLMakie.volume!(ax, v1_crop;
+  #   colormap=colormap,
+  #   lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #   highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #   nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #   transparency=true
+  # )
 
-  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(flow_min, flow_max))
+  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(0, 1))
 
   fig
   display(fig)
@@ -855,13 +866,12 @@ let
     aspect=(1, 1, 1)
   )
 
-
-  # 向 Axis3 添加 volume 绘图
   GLMakie.volume!(ax, ŷ;
     colormap=colormap,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
+    colorrange=(min - 1, max + 1),
+    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
@@ -954,6 +964,7 @@ end
 # ╠═140c1343-2a6e-4d4f-a3db-0d608d7e885c
 # ╟─a2aeaa04-3097-4dd0-8bab-5c98b74514b3
 # ╠═283c0ee5-0321-4f5d-9792-d593f49cafc1
+# ╠═5f87cd17-41bb-47b9-ad16-50bce4d1d0ea
 # ╠═f8f3dafc-0fa4-4d11-b301-89d20adf77f3
 # ╟─1befeeba-40bb-4310-8441-6609fc82dc21
 # ╠═c0dcbc56-be6e-47ba-b3e8-9f12ec469e4b
@@ -962,7 +973,8 @@ end
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
 # ╠═b88d27fe-b02d-45fa-9553-c012cafe9e5a
-# ╠═04330a9d-d2b5-4b54-8e82-42904bcf3ff1
+# ╠═9f9a6203-e808-4b9d-8fd2-179b7720658f
+# ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
 # ╟─97c601e0-7f20-4112-b526-4f1509ce168f
 # ╟─21b31afd-a099-45ef-9bcd-9c61b7b293f9
 # ╠═0dcf9e76-1cd2-403a-b92c-a2679ed5ebf4

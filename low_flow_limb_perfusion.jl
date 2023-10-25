@@ -6,16 +6,12 @@ using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-  quote
-    local iv = try
-      Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-    catch
-      b -> missing
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
     end
-    local el = $(esc(element))
-    global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-    el
-  end
 end
 
 # ╔═╡ eeba971b-c64e-4195-95ca-5cf2ae5ac590
@@ -52,7 +48,7 @@ md"""
 
 Provide the path to the main folder containing the raw DICOM files and segmentations. Then click submit.
 
-$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/limb")))
+$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/low-flow")))
 """
 
 # ╔═╡ a830eebb-faf8-492b-ac42-2109e5173482
@@ -508,8 +504,8 @@ fa_mean_intensity = mean(v2_reg[Bool.(fa_crop)])
 
 # ╔═╡ 022fc5c7-9488-4717-9fd5-5b3dec04bb88
 if aif1_ready
-  aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
-  aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
+    aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+    aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
 end
 
 # ╔═╡ 1e21f95a-bc8a-492f-9a56-820dd3b3d066
@@ -723,6 +719,29 @@ md"""
 # ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
 flow_min, flow_max = minimum(flow_map), maximum(flow_map)
 
+# ╔═╡ 45f6cf8f-f8a5-4b4b-b580-5c09369f0fcb
+flow_map_nans
+
+# ╔═╡ 27cb099f-c20b-4621-a77f-face6df695c5
+begin
+  v2_reg_nans = zeros(size(v2_reg))
+  for i in axes(v2_reg, 1)
+    for j in axes(v2_reg, 2)
+      for k in axes(v2_reg, 3)
+        if iszero(limb_crop_dilated[i, j, k])
+          v2_reg_nans[i, j, k] = NaN
+        else
+          v2_reg_nans[i, j, k] = v2_reg[i, j, k]
+        end
+      end
+    end
+  end
+  v2_reg_nans
+end;
+
+# ╔═╡ 748b606a-7899-4e0a-81e9-9200f43f1e34
+v2_reg_nans
+
 # ╔═╡ 04330a9d-d2b5-4b54-8e82-42904bcf3ff1
 let
   fig = Figure(resolution=(1200, 1000))
@@ -770,109 +789,32 @@ let
 
   GLMakie.volume!(ax, flow_map_nans;
     colormap=colormap,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
+    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  GLMakie.volume!(ax, v2_reg;
-    colormap=:greys,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
+  GLMakie.volume!(ax, v2_reg_nans;
+    colormap=colormap,
+    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  GLMakie.volume!(ax, v1_crop;
-    colormap=:greys,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
-    transparency=true
-  )
+  # GLMakie.volume!(ax, v1_crop;
+  #   colormap=:greys,
+  #   lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #   highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #   nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #   transparency=true
+  # )
 
-  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(flow_min, flow_max))
+  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(0, 1))
 
   fig
   display(fig)
-end
-
-# ╔═╡ 97c601e0-7f20-4112-b526-4f1509ce168f
-md"""
-## Extend to any 3D data
-"""
-
-# ╔═╡ 21b31afd-a099-45ef-9bcd-9c61b7b293f9
-md"""
-**Enter 3D Data File**
-
-Input the name of the file that needs to be 3D shown. Then click submit。
-
-$(@bind visulaztion_file confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/limb/pred.jld2")))
-"""
-
-# ╔═╡ 0dcf9e76-1cd2-403a-b92c-a2679ed5ebf4
-let
-  @load visulaztion_file ŷ
-  min, max = minimum(ŷ), maximum(ŷ)
-  f = Figure(resolution=(1200, 1000))
-
-  # control azimuth
-  Label(f[0, 1], "Azimuth", justification=:left, lineheight=1)
-  azimuth = GLMakie.Slider(f[0, 2:3], range=0:0.01:1, startvalue=0.69)
-  azimuth_slice = lift(azimuth.value) do a
-    a * pi
-  end
-
-  # control elevation
-  Label(f[1, 1], "Elevation", justification=:left, lineheight=1)
-  elevation = GLMakie.Slider(f[1, 2:3], range=0:0.01:1, startvalue=0.18)
-  elevation_slice = lift(elevation.value) do e
-    e * pi
-  end
-
-  # control elevation
-  Label(f[2, 1], "Perspectiveness", justification=:left, lineheight=1)
-  perspectiveness = GLMakie.Slider(f[2, 2:3], range=0:0.01:1, startvalue=0.5)
-  perspectiveness_slice = lift(perspectiveness.value) do p
-    p
-  end
-
-  # control colormap
-  Label(f[3, 1], "Color Slider", justification=:left, lineheight=1)
-  colormap = Observable(to_colormap(:jet))
-  slider = GLMakie.Slider(f[3, 2:3], range=0:1:8, startvalue=0)
-  on(slider.value) do c
-    new_colormap = to_colormap(:jet)
-    for i in 1:c
-      new_colormap[i] = RGBAf(0, 0, 0, 0)
-    end
-    colormap[] = new_colormap
-  end
-
-  # render picture
-  ax = GLMakie.Axis3(f[4, 1:2];
-    perspectiveness=perspectiveness_slice,
-    azimuth=azimuth_slice,
-    elevation=elevation_slice,
-    aspect=(1, 1, 1)
-  )
-
-
-  # 向 Axis3 添加 volume 绘图
-  GLMakie.volume!(ax, ŷ;
-    colormap=colormap,
-    lowclip=:transparent,
-    highclip=:transparent,
-    nan_color=:transparent,
-    transparency=true
-  )
-
-  Colorbar(f[4, 3], colormap=:jet, colorrange=(min, max), flipaxis=false)
-
-  f
-  display(f)
 end
 
 # ╔═╡ Cell order:
@@ -966,7 +908,7 @@ end
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
 # ╠═b88d27fe-b02d-45fa-9553-c012cafe9e5a
+# ╠═45f6cf8f-f8a5-4b4b-b580-5c09369f0fcb
+# ╠═27cb099f-c20b-4621-a77f-face6df695c5
+# ╠═748b606a-7899-4e0a-81e9-9200f43f1e34
 # ╠═04330a9d-d2b5-4b54-8e82-42904bcf3ff1
-# ╟─97c601e0-7f20-4112-b526-4f1509ce168f
-# ╟─21b31afd-a099-45ef-9bcd-9c61b7b293f9
-# ╠═0dcf9e76-1cd2-403a-b92c-a2679ed5ebf4
