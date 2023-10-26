@@ -773,8 +773,8 @@ let
 
   # control colormap
   Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
-  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=800)
-  colorrange_max = Observable(800)
+  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=5000)
+  colorrange_max = Observable(5000)
   on(slider_max.value) do c
 	colorrange_max[] = c
 	update_colorrange()
@@ -788,7 +788,7 @@ let
 	update_colorrange()
   end
 
-  colorrange = Observable((0, 800))
+  colorrange = Observable((0, 5000))
   function update_colorrange()
     colorrange[] = (colorrange_min[], colorrange_max[])
   end
@@ -816,7 +816,7 @@ let
     aspect=(1, 1, 1)
   )
 
-  flow = GLMakie.volume!(ax, flow_map_nans;
+  flow = GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
 	colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -825,7 +825,7 @@ let
     transparency=true
   )
 
-  reg = GLMakie.volume!(ax, v2_reg;
+  reg = GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
 	colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -835,7 +835,7 @@ let
   )
 
   Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
-
+	
   fig
   display(fig)
 end
