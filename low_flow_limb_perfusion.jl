@@ -768,7 +768,27 @@ let
   end
 
   # control colormap
-  Label(fig[3, 1], "Color Slider", justification=:left, lineheight=1)
+  Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
+  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=800)
+  colorrange_max = Observable(800)
+  on(slider_max.value) do c
+	colorrange_max[] = c
+	update_colorrange()
+  end
+	
+  Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
+  slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
+  colorrange_min = Observable(0)
+  on(slider_min.value) do c
+    colorrange_min[] = c
+	update_colorrange()
+  end
+
+  colorrange = Observable((0, 800))
+  function update_colorrange()
+    colorrange[] = (colorrange_min[], colorrange_max[])
+  end
+	
   # colormap = Observable(to_colormap(:jet))
   # slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
   # on(slider.value) do c
@@ -783,7 +803,7 @@ let
   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
   # render picture
-  ax = GLMakie.Axis3(fig[4, 1:2];
+  ax = GLMakie.Axis3(fig[5, 1:2];
     perspectiveness=perspectiveness_slice,
     azimuth=azimuth_slice,
     elevation=elevation_slice,
@@ -792,7 +812,7 @@ let
 
   GLMakie.volume!(ax, flow_map_nans;
     colormap=combined_colormap,
-  	colorrange=(0, 20000),
+  	colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -801,7 +821,7 @@ let
 
   GLMakie.volume!(ax, v2_reg;
     colormap=combined_colormap,
-  	colorrange=(0, v2_reg_max),
+  	colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -809,7 +829,7 @@ let
   )
 
 
-  Colorbar(fig[4, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+  Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
 
   fig
   display(fig)
