@@ -27,6 +27,7 @@ begin
   using FileIO
   using Meshes
   using JLD2
+  using ColorSchemes
 end
 
 # ╔═╡ 0129d839-fde4-46bf-a2e1-beb79fdd2cab
@@ -716,31 +717,30 @@ md"""
 ## Show 3D Limb Image
 """
 
-# ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
-flow_min, flow_max = minimum(flow_map), maximum(flow_map)
-
-# ╔═╡ 45f6cf8f-f8a5-4b4b-b580-5c09369f0fcb
-flow_map_nans
-
-# ╔═╡ 27cb099f-c20b-4621-a77f-face6df695c5
+# ╔═╡ db70d3a6-255f-4920-9d32-b6186c32adee
 begin
-  v2_reg_nans = zeros(size(v2_reg))
-  for i in axes(v2_reg, 1)
-    for j in axes(v2_reg, 2)
-      for k in axes(v2_reg, 3)
-        if iszero(limb_crop_dilated[i, j, k])
-          v2_reg_nans[i, j, k] = NaN
+  flow_render = zeros(size(flow_map_nans))
+  for i in axes(flow_map_nans, 1)
+    for j in axes(flow_map_nans, 2)
+      for k in axes(flow_map_nans, 3)
+        if isnan(flow_map_nans[i, j, k])
+          flow_render[i, j, k] = 0
         else
-          v2_reg_nans[i, j, k] = v2_reg[i, j, k]
+          flow_render[i, j, k] = flow_map_nans[i, j, k]
         end
       end
     end
   end
-  v2_reg_nans
 end;
 
-# ╔═╡ 748b606a-7899-4e0a-81e9-9200f43f1e34
-v2_reg_nans
+# ╔═╡ c5dcedba-01c0-4193-8210-f2fb855a0fe3
+flow_render_min, flow_render_max = minimum(flow_render), maximum(flow_render)
+
+# ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
+flow_min, flow_max = minimum(flow_map), maximum(flow_map)
+
+# ╔═╡ 4b847a5f-bd90-421d-afdc-e5849377a438
+v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
 
 # ╔═╡ 04330a9d-d2b5-4b54-8e82-42904bcf3ff1
 let
@@ -769,15 +769,18 @@ let
 
   # control colormap
   Label(fig[3, 1], "Color Slider", justification=:left, lineheight=1)
-  colormap = Observable(to_colormap(:jet))
-  slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
-  on(slider.value) do c
-    new_colormap = to_colormap(:jet)
-    for i in 1:c
-      new_colormap[i] = RGBAf(0, 0, 0, 0)
-    end
-    colormap[] = new_colormap
-  end
+  # colormap = Observable(to_colormap(:jet))
+  # slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
+  # on(slider.value) do c
+  #   new_colormap = to_colormap(:jet)
+  #   for i in 1:c
+  #     new_colormap[i] = RGBAf(0, 0, 0, 0)
+  #   end
+  #   colormap[] = new_colormap
+  # end
+
+  jet_colors = ColorSchemes.jet.colors
+  combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
   # render picture
   ax = GLMakie.Axis3(fig[4, 1:2];
@@ -788,30 +791,25 @@ let
   )
 
   GLMakie.volume!(ax, flow_map_nans;
-    colormap=colormap,
+    colormap=combined_colormap,
+  	colorrange=(0, 20000),
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  GLMakie.volume!(ax, v2_reg_nans;
-    colormap=colormap,
+  GLMakie.volume!(ax, v2_reg;
+    colormap=combined_colormap,
+  	colorrange=(0, v2_reg_max),
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  # GLMakie.volume!(ax, v1_crop;
-  #   colormap=:greys,
-  #   lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-  #   highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-  #   nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-  #   transparency=true
-  # )
 
-  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(0, 1))
+  Colorbar(fig[4, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
 
   fig
   display(fig)
@@ -907,8 +905,8 @@ end
 # ╠═a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
+# ╠═db70d3a6-255f-4920-9d32-b6186c32adee
+# ╠═c5dcedba-01c0-4193-8210-f2fb855a0fe3
 # ╠═b88d27fe-b02d-45fa-9553-c012cafe9e5a
-# ╠═45f6cf8f-f8a5-4b4b-b580-5c09369f0fcb
-# ╠═27cb099f-c20b-4621-a77f-face6df695c5
-# ╠═748b606a-7899-4e0a-81e9-9200f43f1e34
+# ╠═4b847a5f-bd90-421d-afdc-e5849377a438
 # ╠═04330a9d-d2b5-4b54-8e82-42904bcf3ff1

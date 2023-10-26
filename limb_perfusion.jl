@@ -27,6 +27,7 @@ begin
   using FileIO
   using Meshes
   using JLD2
+  using ColorSchemes
 end
 
 # ╔═╡ 0129d839-fde4-46bf-a2e1-beb79fdd2cab
@@ -633,9 +634,6 @@ if aif1_ready && aif2_ready
   @bind z_flow PlutoUI.Slider(axes(flow_map, 3), show_value=true, default=size(flow_map, 3) ÷ 2)
 end
 
-# ╔═╡ 5f87cd17-41bb-47b9-ad16-50bce4d1d0ea
-limb_crop
-
 # ╔═╡ f8f3dafc-0fa4-4d11-b301-89d20adf77f3
 begin
   limb_crop_dilated = dilate(dilate(dilate(dilate(dilate(limb_crop)))))
@@ -662,12 +660,12 @@ if aif1_ready && aif2_ready
       f[1, 1],
       title="Flow Map",
     )
-    heatmap!(v2_reg[:, :, z_flow], colormap=:grays)
+    heatmap!(v2_reg[:, :, z_flow], colormap=(:grays, 0.6))
     heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
 
-    # heatmap!(flow_map[:, :, z_flow], colormap=(:jet, 0.6))
-	# heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 0.6))
-	# heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 0.6))
+    # heatmap!(flow_map[:, :, z_flow], colormap=(:jet, 1))
+	# heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 1))
+	# heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 1))
 	  
     Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
       flipaxis=false)
@@ -723,11 +721,30 @@ md"""
 ## Show 3D Limb Image
 """
 
-# ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
+# ╔═╡ 33f165bd-44f1-4d96-8b6b-7856d384ccd8
+begin
+  flow_render = zeros(size(flow_map_nans))
+  for i in axes(flow_map_nans, 1)
+    for j in axes(flow_map_nans, 2)
+      for k in axes(flow_map_nans, 3)
+        if isnan(flow_map_nans[i, j, k])
+          flow_render[i, j, k] = 0
+        else
+          flow_render[i, j, k] = flow_map_nans[i, j, k]
+        end
+      end
+    end
+  end
+end;
+
+# ╔═╡ 17c4a90a-b9fe-459d-9914-4aae6295c6e2
+flow_render_min, flow_render_max = minimum(flow_render), maximum(flow_render)
+
+# ╔═╡ 1a01913d-2462-4fef-b0e1-f764312e29ee
 flow_min, flow_max = minimum(flow_map), maximum(flow_map)
 
-# ╔═╡ 9f9a6203-e808-4b9d-8fd2-179b7720658f
-flow_map_nans
+# ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
+v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
 
 # ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
 let
@@ -756,15 +773,19 @@ let
 
   # control colormap
   Label(fig[3, 1], "Color Slider", justification=:left, lineheight=1)
-  colormap = Observable(to_colormap(:jet))
-  slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
-  on(slider.value) do c
-    new_colormap = to_colormap(:jet)
-    for i in 1:c
-      new_colormap[i] = RGBAf(0, 0, 0, 0)
-    end
-    colormap[] = new_colormap
-  end
+  # colormap = Observable(to_colormap(:jet))
+  # slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
+  # on(slider.value) do c
+  #   new_colormap = to_colormap(:jet)
+  #   for i in 1:c
+  #     new_colormap[i] = RGBAf(0, 0, 0, 0)
+  #   end
+  #   colormap[] = new_colormap
+  # end
+
+
+  jet_colors = ColorSchemes.jet.colors
+  combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
 
   # render picture
@@ -776,7 +797,8 @@ let
   )
 
   GLMakie.volume!(ax, flow_map_nans;
-    colormap=colormap,
+    colormap=combined_colormap,
+	colorrange=(0, 20000),
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -784,22 +806,15 @@ let
   )
 
   GLMakie.volume!(ax, v2_reg;
-    colormap=colormap,
+    colormap=combined_colormap,
+	colorrange=(0, v2_reg_max),
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  # GLMakie.volume!(ax, v1_crop;
-  #   colormap=colormap,
-  #   lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-  #   highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-  #   nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-  #   transparency=true
-  # )
-
-  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(0, 1))
+  Colorbar(fig[4, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
 
   fig
   display(fig)
@@ -868,7 +883,6 @@ let
 
   GLMakie.volume!(ax, ŷ;
     colormap=colormap,
-    colorrange=(min - 1, max + 1),
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -964,7 +978,6 @@ end
 # ╠═140c1343-2a6e-4d4f-a3db-0d608d7e885c
 # ╟─a2aeaa04-3097-4dd0-8bab-5c98b74514b3
 # ╠═283c0ee5-0321-4f5d-9792-d593f49cafc1
-# ╠═5f87cd17-41bb-47b9-ad16-50bce4d1d0ea
 # ╠═f8f3dafc-0fa4-4d11-b301-89d20adf77f3
 # ╟─1befeeba-40bb-4310-8441-6609fc82dc21
 # ╠═c0dcbc56-be6e-47ba-b3e8-9f12ec469e4b
@@ -972,8 +985,10 @@ end
 # ╠═a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
-# ╠═b88d27fe-b02d-45fa-9553-c012cafe9e5a
-# ╠═9f9a6203-e808-4b9d-8fd2-179b7720658f
+# ╠═33f165bd-44f1-4d96-8b6b-7856d384ccd8
+# ╠═17c4a90a-b9fe-459d-9914-4aae6295c6e2
+# ╠═1a01913d-2462-4fef-b0e1-f764312e29ee
+# ╠═f8e96518-be85-4158-b751-d0dbfe0b44d7
 # ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
 # ╟─97c601e0-7f20-4112-b526-4f1509ce168f
 # ╟─21b31afd-a099-45ef-9bcd-9c61b7b293f9
