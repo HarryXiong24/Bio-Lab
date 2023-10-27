@@ -6,12 +6,16 @@ using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
+  quote
+    local iv = try
+      Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+    catch
+      b -> missing
     end
+    local el = $(esc(element))
+    global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+    el
+  end
 end
 
 # ╔═╡ eeba971b-c64e-4195-95ca-5cf2ae5ac590
@@ -505,8 +509,8 @@ fa_mean_intensity = mean(v2_reg[Bool.(fa_crop)])
 
 # ╔═╡ 022fc5c7-9488-4717-9fd5-5b3dec04bb88
 if aif1_ready
-    aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
-    aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
+  aif_vec_ss = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+  aif_vec_gamma = [aif_vec_ss..., fa_mean_intensity]
 end
 
 # ╔═╡ 1e21f95a-bc8a-492f-9a56-820dd3b3d066
@@ -660,8 +664,12 @@ if aif1_ready && aif2_ready
       f[1, 1],
       title="Flow Map",
     )
-    heatmap!(v2_reg[:, :, z_flow], colormap=:grays)
+    heatmap!(v2_reg[:, :, z_flow], colormap=(:grays, 0.6))
     heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
+
+    # heatmap!(flow_map[:, :, z_flow], colormap=(:jet, 1))
+    # heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 1))
+    # heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 1))
 
     Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
       flipaxis=false)
@@ -717,7 +725,7 @@ md"""
 ## Show 3D Limb Image
 """
 
-# ╔═╡ db70d3a6-255f-4920-9d32-b6186c32adee
+# ╔═╡ 33f165bd-44f1-4d96-8b6b-7856d384ccd8
 begin
   flow_render = zeros(size(flow_map_nans))
   for i in axes(flow_map_nans, 1)
@@ -733,16 +741,16 @@ begin
   end
 end;
 
-# ╔═╡ c5dcedba-01c0-4193-8210-f2fb855a0fe3
+# ╔═╡ 17c4a90a-b9fe-459d-9914-4aae6295c6e2
 flow_render_min, flow_render_max = minimum(flow_render), maximum(flow_render)
 
-# ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
+# ╔═╡ 1a01913d-2462-4fef-b0e1-f764312e29ee
 flow_min, flow_max = minimum(flow_map), maximum(flow_map)
 
-# ╔═╡ 4b847a5f-bd90-421d-afdc-e5849377a438
+# ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
 v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
 
-# ╔═╡ 04330a9d-d2b5-4b54-8e82-42904bcf3ff1
+# ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
 let
   fig = Figure(resolution=(1200, 1000))
 
@@ -769,38 +777,29 @@ let
 
   # control colormap
   Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
-  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=800)
-  colorrange_max = Observable(800)
+  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=5000)
+  colorrange_max = Observable(5000)
   on(slider_max.value) do c
-	colorrange_max[] = c
-	update_colorrange()
+    colorrange_max[] = c
+    update_colorrange()
   end
-	
+
   Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
   slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
   colorrange_min = Observable(0)
   on(slider_min.value) do c
     colorrange_min[] = c
-	update_colorrange()
+    update_colorrange()
   end
 
-  colorrange = Observable((0, 800))
+  colorrange = Observable((0, 5000))
   function update_colorrange()
     colorrange[] = (colorrange_min[], colorrange_max[])
   end
-	
-  # colormap = Observable(to_colormap(:jet))
-  # slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
-  # on(slider.value) do c
-  #   new_colormap = to_colormap(:jet)
-  #   for i in 1:c
-  #     new_colormap[i] = RGBAf(0, 0, 0, 0)
-  #   end
-  #   colormap[] = new_colormap
-  # end
 
   jet_colors = ColorSchemes.jet.colors
   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
+
 
   # render picture
   ax = GLMakie.Axis3(fig[5, 1:2];
@@ -810,26 +809,31 @@ let
     aspect=(1, 1, 1)
   )
 
-  GLMakie.volume!(ax, flow_map_nans;
+  GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
-  	colorrange=colorrange,
+    colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  GLMakie.volume!(ax, v2_reg;
+  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
-  	colorrange=colorrange,
+    colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
-
 
   Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+
+  button = GLMakie.Button(fig[6, 1], label="Download Image")
+
+  on(button.clicks) do n
+    save("output.raw", fig)
+  end
 
   fig
   display(fig)
@@ -925,8 +929,8 @@ end
 # ╠═a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
-# ╠═db70d3a6-255f-4920-9d32-b6186c32adee
-# ╠═c5dcedba-01c0-4193-8210-f2fb855a0fe3
-# ╠═b88d27fe-b02d-45fa-9553-c012cafe9e5a
-# ╠═4b847a5f-bd90-421d-afdc-e5849377a438
-# ╠═04330a9d-d2b5-4b54-8e82-42904bcf3ff1
+# ╠═33f165bd-44f1-4d96-8b6b-7856d384ccd8
+# ╠═17c4a90a-b9fe-459d-9914-4aae6295c6e2
+# ╠═1a01913d-2462-4fef-b0e1-f764312e29ee
+# ╠═f8e96518-be85-4158-b751-d0dbfe0b44d7
+# ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
