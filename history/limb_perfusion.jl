@@ -6,12 +6,16 @@ using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
+  quote
+    local iv = try
+      Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+    catch
+      b -> missing
     end
+    local el = $(esc(element))
+    global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+    el
+  end
 end
 
 # ╔═╡ eeba971b-c64e-4195-95ca-5cf2ae5ac590
@@ -27,7 +31,6 @@ begin
   using FileIO
   using Meshes
   using JLD2
-  using ColorSchemes
 end
 
 # ╔═╡ 0129d839-fde4-46bf-a2e1-beb79fdd2cab
@@ -660,13 +663,9 @@ if aif1_ready && aif2_ready
       f[1, 1],
       title="Flow Map",
     )
-    heatmap!(v2_reg[:, :, z_flow], colormap=(:grays, 0.6))
+    heatmap!(v2_reg[:, :, z_flow], colormap=:grays)
     heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
 
-    # heatmap!(flow_map[:, :, z_flow], colormap=(:jet, 1))
-	# heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 1))
-	# heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 1))
-	  
     Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
       flipaxis=false)
     f
@@ -721,32 +720,10 @@ md"""
 ## Show 3D Limb Image
 """
 
-# ╔═╡ 33f165bd-44f1-4d96-8b6b-7856d384ccd8
-begin
-  flow_render = zeros(size(flow_map_nans))
-  for i in axes(flow_map_nans, 1)
-    for j in axes(flow_map_nans, 2)
-      for k in axes(flow_map_nans, 3)
-        if isnan(flow_map_nans[i, j, k])
-          flow_render[i, j, k] = 0
-        else
-          flow_render[i, j, k] = flow_map_nans[i, j, k]
-        end
-      end
-    end
-  end
-end;
-
-# ╔═╡ 17c4a90a-b9fe-459d-9914-4aae6295c6e2
-flow_render_min, flow_render_max = minimum(flow_render), maximum(flow_render)
-
-# ╔═╡ 1a01913d-2462-4fef-b0e1-f764312e29ee
+# ╔═╡ b88d27fe-b02d-45fa-9553-c012cafe9e5a
 flow_min, flow_max = minimum(flow_map), maximum(flow_map)
 
-# ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
-v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
-
-# ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
+# ╔═╡ 04330a9d-d2b5-4b54-8e82-42904bcf3ff1
 let
   fig = Figure(resolution=(1200, 1000))
 
@@ -772,76 +749,51 @@ let
   end
 
   # control colormap
-  Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
-  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=5000)
-  colorrange_max = Observable(5000)
-  on(slider_max.value) do c
-	colorrange_max[] = c
-	update_colorrange()
+  Label(fig[3, 1], "Color Slider", justification=:left, lineheight=1)
+  colormap = Observable(to_colormap(:jet))
+  slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
+  on(slider.value) do c
+    new_colormap = to_colormap(:jet)
+    for i in 1:c
+      new_colormap[i] = RGBAf(0, 0, 0, 0)
+    end
+    colormap[] = new_colormap
   end
-	
-  Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
-  slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
-  colorrange_min = Observable(0)
-  on(slider_min.value) do c
-    colorrange_min[] = c
-	update_colorrange()
-  end
-
-  colorrange = Observable((0, 5000))
-  function update_colorrange()
-    colorrange[] = (colorrange_min[], colorrange_max[])
-  end
-
-  # colormap = Observable(to_colormap(:jet))
-  # slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
-  # on(slider.value) do c
-  #   new_colormap = to_colormap(:jet)
-  #   for i in 1:c
-  #     new_colormap[i] = RGBAf(0, 0, 0, 0)
-  #   end
-  #   colormap[] = new_colormap
-  # end
-
-
-  jet_colors = ColorSchemes.jet.colors
-  combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
-
 
   # render picture
-  ax = GLMakie.Axis3(fig[5, 1:2];
+  ax = GLMakie.Axis3(fig[4, 1:2];
     perspectiveness=perspectiveness_slice,
     azimuth=azimuth_slice,
     elevation=elevation_slice,
     aspect=(1, 1, 1)
   )
 
-  GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+  GLMakie.volume!(ax, flow_map_nans;
+    colormap=colormap,
+    lowclip=:transparent,
+    highclip=:transparent,
+    nan_color=:transparent,
     transparency=true
   )
 
-  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+  GLMakie.volume!(ax, v2_reg;
+    colormap=:greys,
+    lowclip=:transparent,
+    highclip=:transparent,
+    nan_color=:transparent,
     transparency=true
   )
 
-  Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+  GLMakie.volume!(ax, v1_crop;
+    colormap=:greys,
+    lowclip=:transparent,
+    highclip=:transparent,
+    nan_color=:transparent,
+    transparency=true
+  )
 
-  button = GLMakie.Button(fig[6, 1], label = "Download Image")
+  Colorbar(fig[4, 3], colormap=:jet, flipaxis=false, colorrange=(flow_min, flow_max))
 
-  on(button.clicks) do n
-	save("output.png", fig)
-  end
-	
   fig
   display(fig)
 end
@@ -907,11 +859,13 @@ let
     aspect=(1, 1, 1)
   )
 
+
+  # 向 Axis3 添加 volume 绘图
   GLMakie.volume!(ax, ŷ;
     colormap=colormap,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+    lowclip=:transparent,
+    highclip=:transparent,
+    nan_color=:transparent,
     transparency=true
   )
 
@@ -1011,11 +965,8 @@ end
 # ╠═a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
-# ╠═33f165bd-44f1-4d96-8b6b-7856d384ccd8
-# ╠═17c4a90a-b9fe-459d-9914-4aae6295c6e2
-# ╠═1a01913d-2462-4fef-b0e1-f764312e29ee
-# ╠═f8e96518-be85-4158-b751-d0dbfe0b44d7
-# ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
+# ╠═b88d27fe-b02d-45fa-9553-c012cafe9e5a
+# ╠═04330a9d-d2b5-4b54-8e82-42904bcf3ff1
 # ╟─97c601e0-7f20-4112-b526-4f1509ce168f
 # ╟─21b31afd-a099-45ef-9bcd-9c61b7b293f9
 # ╠═0dcf9e76-1cd2-403a-b92c-a2679ed5ebf4

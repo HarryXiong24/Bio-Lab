@@ -793,17 +793,6 @@ let
     colorrange[] = (colorrange_min[], colorrange_max[])
   end
 
-  # colormap = Observable(to_colormap(:jet))
-  # slider = GLMakie.Slider(fig[3, 2:3], range=0:1:8, startvalue=0)
-  # on(slider.value) do c
-  #   new_colormap = to_colormap(:jet)
-  #   for i in 1:c
-  #     new_colormap[i] = RGBAf(0, 0, 0, 0)
-  #   end
-  #   colormap[] = new_colormap
-  # end
-
-
   jet_colors = ColorSchemes.jet.colors
   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
@@ -816,7 +805,7 @@ let
     aspect=(1, 1, 1)
   )
 
-  flow = GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
+  GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
 	colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -825,7 +814,7 @@ let
     transparency=true
   )
 
-  reg = GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
+  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
 	colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -835,6 +824,12 @@ let
   )
 
   Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+
+  button = GLMakie.Button(fig[6, 1], label = "Download Image")
+
+  on(button.clicks) do n
+	save("output.raw", fig)
+  end
 	
   fig
   display(fig)
