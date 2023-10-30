@@ -726,33 +726,6 @@ begin
   rca_crop = copy(rca_mask)
 end;
 
-# ╔═╡ d4e86abf-fb28-4aa9-aa84-307c974630ad
-md"""
-# Registration
-"""
-
-# ╔═╡ 131cc859-c8fe-43ba-a486-1ccb2d4c1392
-# @bind z_reg PlutoUI.Slider(axes(v2_crop, 3), show_value=true, default=182)
-
-# ╔═╡ f2e34124-12df-498a-8632-9f4d34866248
-# let
-#   f = Figure(resolution=(2200, 1400))
-#   ax = CairoMakie.Axis(
-#     f[1, 1],
-#     title="Unregistered",
-#     titlesize=40,
-#   )
-#   heatmap!(v1_crop[:, :, z_reg])
-
-#   ax = CairoMakie.Axis(
-#     f[1, 2],
-#     title="Registered",
-#     titlesize=40,
-#   )
-#   heatmap!(v1_crop[:, :, z_reg])
-#   f
-# end
-
 # ╔═╡ 0fbad88e-7598-4416-ba4f-caab5af09bbb
 md"""
 # Arterial Input Function (AIF)
@@ -767,9 +740,9 @@ md"""
 md"""
 Select slice: $(@bind z1_aif PlutoUI.Slider(axes(ss_arr, 3), show_value = true, default = size(ss_arr, 3)))
 
-Choose x location: $(@bind x1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = true, default = 426))
+Choose x location: $(@bind x1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = true, default = 390))
 
-Choose y location: $(@bind y1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = true, default = 236))
+Choose y location: $(@bind y1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = true, default = 240))
 
 Choose radius: $(@bind r1_aif PlutoUI.Slider(1:10, show_value = true, default = 7))
 
@@ -1224,14 +1197,14 @@ let
     transparency=true
   )
 
-  GLMakie.volume!(ax, v2_crop[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
-  )
+ #  GLMakie.volume!(ax, v2_crop[end:-1:1, end:-1:1, end:-1:1];
+ #    colormap=combined_colormap,
+	# colorrange=colorrange,
+ #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    transparency=true
+ #  )
 	
   GLMakie.volume!(ax, aorta_crop[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
@@ -1383,12 +1356,9 @@ end
 # ╟─6bf5d4eb-423b-4c1c-870e-fe7850b23137
 # ╠═c4e52e97-db66-4798-a1e0-0a6d5b66bb9d
 # ╠═d75d2a7c-a025-4642-a8bd-fc57577f9aa2
-# ╟─d4e86abf-fb28-4aa9-aa84-307c974630ad
-# ╠═131cc859-c8fe-43ba-a486-1ccb2d4c1392
-# ╠═f2e34124-12df-498a-8632-9f4d34866248
 # ╟─0fbad88e-7598-4416-ba4f-caab5af09bbb
 # ╟─c966dfc6-3117-4d76-9e12-129e05bbf68a
-# ╟─84ccac14-41a5-491f-a88d-d364c6d43a2f
+# ╠═84ccac14-41a5-491f-a88d-d364c6d43a2f
 # ╟─5eb279b5-348f-4c00-bad2-c40f545739be
 # ╠═6864be65-b474-4fa2-84a6-0f8c789e669d
 # ╟─1e21f95a-bc8a-492f-9a56-820dd3b3d066
