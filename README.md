@@ -3,8 +3,26 @@
 ## How to run it
 
 ``` bash
+# activate
+julia
+
+]
+
+activate .
+
+update
+
+# add new deps
+julia
+
+]
+
+activate .
+
+add package_name
+
 # Enter terminal at this folder and input
-Julia
+julia
 
 # Then run:
 using Pluto; Pluto.run();
