@@ -10,6 +10,9 @@ julia
 
 activate .
 
+instantiate
+
+# or
 update
 
 # add new deps

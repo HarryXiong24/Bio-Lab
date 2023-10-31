@@ -757,7 +757,7 @@ let
   GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
 	colorrange=colorrange,
-    algorithm=:absorption,
+    # algorithm=:absorption,
 	# isovalue=0,
 	# isorange=3000,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
@@ -871,6 +871,9 @@ flow_min, flow_max = minimum(flow_map), maximum(flow_map)
 
 # ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
 v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
+
+# ╔═╡ 53bdc885-e932-4129-92bc-9a87eb075577
+ heatmap(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
 
 # ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
 let
@@ -1141,6 +1144,7 @@ end
 # ╠═17c4a90a-b9fe-459d-9914-4aae6295c6e2
 # ╠═1a01913d-2462-4fef-b0e1-f764312e29ee
 # ╠═f8e96518-be85-4158-b751-d0dbfe0b44d7
+# ╠═53bdc885-e932-4129-92bc-9a87eb075577
 # ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
 # ╟─97c601e0-7f20-4112-b526-4f1509ce168f
 # ╟─21b31afd-a099-45ef-9bcd-9c61b7b293f9
