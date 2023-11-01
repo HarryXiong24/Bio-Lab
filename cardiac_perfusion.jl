@@ -746,7 +746,7 @@ Choose y location: $(@bind y1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = t
 
 Choose radius: $(@bind r1_aif PlutoUI.Slider(1:10, show_value = true, default = 7))
 
-Check box when ready: $(@bind aif1_ready PlutoUI.CheckBox(default = true))
+Check box when ready: $(@bind aif1_ready PlutoUI.CheckBox(default = false))
 """
 
 # ╔═╡ 5eb279b5-348f-4c00-bad2-c40f545739be

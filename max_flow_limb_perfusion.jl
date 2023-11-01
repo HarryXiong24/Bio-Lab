@@ -1,21 +1,17 @@
 ### A Pluto.jl notebook ###
-# v0.19.29
+# v0.19.32
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-  quote
-    local iv = try
-      Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-    catch
-      b -> missing
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
     end
-    local el = $(esc(element))
-    global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-    el
-  end
 end
 
 # ╔═╡ eeba971b-c64e-4195-95ca-5cf2ae5ac590
@@ -53,7 +49,7 @@ md"""
 
 Provide the path to the main folder containing the raw DICOM files and segmentations. Then click submit.
 
-$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/low-flow")))
+$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/limb")))
 """
 
 # ╔═╡ a830eebb-faf8-492b-ac42-2109e5173482
@@ -523,88 +519,107 @@ md"""
 ## Extract SureStart Times
 """
 
-# ╔═╡ 61604f83-e5f3-4aed-ac0b-1c630d7a1d67
-if aif1_ready && aif2_ready
-  time_vector_ss = scan_time_vector(dcms_ss)
-  time_vector_ss_rel = time_vector_ss .- time_vector_ss[1]
-
-  time_vector_v2 = scan_time_vector(dcms_v2)
-  time_vector_v2_rel = time_vector_v2 .- time_vector_v2[1]
-
-  delta_time = time_vector_v2[length(time_vector_v2)÷2] - time_vector_ss[end]
-
-  time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
-end
-
-# ╔═╡ e385d115-47e4-4a59-a6d0-6ea95455e901
+# ╔═╡ d6b854f2-e24a-42e9-8473-03723c56b103
 md"""
 ## Gamma Variate
 """
 
-# ╔═╡ e87721fa-5731-4a3e-bd8d-a17dc8fdeffc
+# ╔═╡ f54b5c69-a9dd-4629-ba9f-1eb34ae468a9
+@bind offset PlutoUI.Slider(0:0.5:10, show_value = true, default = 5)
+
+# ╔═╡ b69f4afd-56a4-462a-a803-c62b5695b84c
 if aif1_ready && aif2_ready
-  # Upper and Lower Bounds
-  lb = [-100.0, 0.0]
-  ub = [100.0, 200.0]
+	time_vector_ss = scan_time_vector(dcms_ss) .+ offset
+	time_vector_ss_rel = time_vector_ss .- time_vector_ss[1]
 
-  baseline_hu = mean(aif_vec_gamma[1:3])
-  p0 = [0.0, baseline_hu]  # Initial guess (0, blood pool offset)
+	time_vector_v2 = scan_time_vector(dcms_v2)
+	time_vector_v2_rel = time_vector_v2 .- time_vector_v2[1]
 
-  time_vec_end, aif_vec_end = time_vec_gamma[end], aif_vec_gamma[end]
+	delta_time = time_vector_v2[length(time_vector_v2) ÷ 2] - time_vector_ss[end]
 
-  fit = gamma_curve_fit(time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0; lower_bounds=lb, upper_bounds=ub)
-  opt_params = fit.param
+	time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
 end
 
-# ╔═╡ fc43feee-9d9a-4af6-a76a-7dfbb927c0ae
+# ╔═╡ 70588135-9388-432c-b2c8-6824a42603b1
+delta_time
+
+# ╔═╡ 31e15ab9-1445-4ec7-a417-99fdb6b9b0c5
 if aif1_ready && aif2_ready
-  x_fit = range(start=minimum(time_vec_gamma), stop=maximum(time_vec_gamma), length=500)
-  y_fit = gamma(x_fit, opt_params, time_vec_end, aif_vec_end)
-  dense_y_fit_adjusted = max.(y_fit .- baseline_hu, 0)
+	# Upper and Lower Bounds
+	lb = [-100.0, 0.0]
+	ub = [100.0, 200.0]
 
-  area_under_curve = trapz(x_fit, dense_y_fit_adjusted)
-  times = collect(range(time_vec_gamma[1], stop=time_vec_end, length=round(Int, maximum(time_vec_gamma))))
+	baseline_hu = mean(aif_vec_gamma[1:3])
+	p0 = [0.0, baseline_hu]  # Initial guess (0, blood pool offset)
 
-  input_conc = area_under_curve ./ (time_vec_gamma[19] - times[4])
-  if length(aif_vec_gamma) > 2
-    input_conc = mean([aif_vec_gamma[end], aif_vec_gamma[end-1]])
-  end
+	time_vec_end, aif_vec_end = time_vec_gamma[end], aif_vec_gamma[end]
+
+	fit = gamma_curve_fit(time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0; lower_bounds = lb, upper_bounds = ub)
+	opt_params = fit.param
 end
 
-# ╔═╡ c44b2487-bcd2-43f2-af89-2e3b0e1a54e8
+# ╔═╡ 3a47e743-8404-44d8-8a4e-0d617eee74b8
 if aif1_ready && aif2_ready
-  let
-    f = Figure()
-    ax = Axis(
-      f[1, 1],
-      xlabel="Time Point",
-      ylabel="Intensity (HU)",
-      title="Fitted AIF Curve",
-    )
+	x_fit = range(start = minimum(time_vec_gamma), stop = maximum(time_vec_gamma), length=500)
+	y_fit = gamma(x_fit, opt_params, time_vec_end, aif_vec_end)
+	dense_y_fit_adjusted = max.(y_fit .- baseline_hu, 0)
 
-    scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
-    lines!(x_fit, y_fit, label="Fitted Curve", color=:red)
-    scatter!(time_vec_gamma[end-1], aif_vec_gamma[end-1], label="Trigger")
-    scatter!(time_vec_gamma[end], aif_vec_gamma[end], label="V2")
-
-    axislegend(ax, position=:lt)
-
-    # Create the AUC plot
-    time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
-    auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
-
-    # Create a denser AUC plot
-    n_points = 1000  # Number of points for denser interpolation
-    time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
-    auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
-
-    for i ∈ 1:length(auc_area_dense)
-      lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
-    end
-
-    f
-  end
+	area_under_curve = trapz(x_fit, dense_y_fit_adjusted)
+	times = collect(range(time_vec_gamma[1], stop=time_vec_end, length=round(Int, maximum(time_vec_gamma))))
+	
+	input_conc = area_under_curve ./ (time_vec_gamma[19] - times[4])
+	if length(aif_vec_gamma) > 2
+		input_conc = mean([aif_vec_gamma[end], aif_vec_gamma[end-1]])
+	end
 end
+
+# ╔═╡ ef1e70ab-0b92-4c3f-b057-1d2f9ba57dd9
+if aif1_ready && aif2_ready
+	let
+		f = Figure()
+		ax = Axis(
+			f[1, 1],
+			xlabel = "Time Point",
+			ylabel = "Intensity (HU)",
+			title = "Fitted AIF Curve"
+		)
+		
+		scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
+		lines!(x_fit, y_fit, label="Fitted Curve", color = :red)
+		scatter!(time_vec_gamma[end-1], aif_vec_gamma[end-1], label = "Trigger")
+		scatter!(time_vec_gamma[end], aif_vec_gamma[end], label = "V2")
+		
+		axislegend(ax, position=:lt)
+	
+		# Create the AUC plot
+		time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
+		auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+		
+		# Create a denser AUC plot
+		n_points = 1000  # Number of points for denser interpolation
+		time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
+		auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+	
+		for i = 1:length(auc_area_dense)
+		    lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
+		end
+	
+		f
+	end
+end
+
+# ╔═╡ da1b7a69-5bfb-4515-88b7-1858ef4e05ef
+col_names = [
+  "perfusion",
+  "perfusion_std",
+  "perfusion_ref",
+  "flow",
+  "flow_std",
+  "delta_time",
+  "mass",
+  "delta_hu",
+  "heart_rate",
+]
 
 # ╔═╡ 5aecb6b9-a813-4cf8-8a7f-2da4a19a052e
 md"""
@@ -633,19 +648,58 @@ if aif1_ready && aif2_ready
   perf = (flow / organ_mass, std(perf_map[limb_crop]))
 end
 
+# ╔═╡ 009ffffc-2c9d-430d-978a-9e3e1b17801a
+if aif1_ready && aif2_ready
+  col_vals = [
+    perf[1],
+    perf[2],
+    length(perf) == 3 ? perf[3] : missing,
+    perf[1] * organ_mass,
+    perf[2] * organ_mass,
+    delta_time,
+    organ_mass,
+    delta_hu,
+    heart_rate,
+  ]
+end
+
+# ╔═╡ 2b7bdc26-77d2-4068-be2d-bb1170f20648
+if aif1_ready && aif2_ready
+  df = DataFrame(parameters=col_names, values=col_vals)
+end
+
+# ╔═╡ 216e95d5-f2b8-4620-a889-7d805933dff4
+# hist(vec(perf_map), bins = 100)
+
+# ╔═╡ c7600cd1-4b0b-44c2-b645-e41f11282d42
+# mean(vec(perf_map))
+
+# ╔═╡ 1eef4684-992f-45c5-863f-76bdc7671357
+# perf
+
+# ╔═╡ dcb499d4-ee8d-4fb3-ae0e-31aec462fa0e
+# hist(vec(flow_map))
+
 # ╔═╡ a2aeaa04-3097-4dd0-8bab-5c98b74514b3
 if aif1_ready && aif2_ready
   @bind z_flow PlutoUI.Slider(axes(flow_map, 3), show_value=true, default=size(flow_map, 3) ÷ 2)
 end
 
+# ╔═╡ 8a5ac63f-b5c1-459d-ac93-3eb9d5312185
+# CairoMakie.volume(flow_map_nans, nan_color=RGBAf(0.0, 0.0, 0.0, 0.0))
+
+# ╔═╡ c7235626-212c-4ba8-a55a-7572abea4b8c
+# hist(vals, bins = 100)
+
 # ╔═╡ f8f3dafc-0fa4-4d11-b301-89d20adf77f3
 begin
+  # limb_crop_dilated = dilate(dilate(dilate(dilate(dilate(limb_crop)))))
   limb_crop_dilated = dilate(dilate(dilate(dilate(dilate(limb_crop)))))
   flow_map_nans = zeros(size(flow_map))
   for i in axes(flow_map, 1)
     for j in axes(flow_map, 2)
       for k in axes(flow_map, 3)
-        if iszero(limb_crop_dilated[i, j, k])
+        if iszero(limb_crop[i, j, k])
           flow_map_nans[i, j, k] = NaN
         else
           flow_map_nans[i, j, k] = flow_map[i, j, k]
@@ -668,13 +722,19 @@ if aif1_ready && aif2_ready
     heatmap!(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
 
     # heatmap!(flow_map[:, :, z_flow], colormap=(:jet, 1))
-    # heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 1))
-    # heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 1))
-
-    Colorbar(f[1, 2], limits=(-10, 300), colormap=:jet,
+	# heatmap!(v1_crop[:, :, z_flow], colormap=(:jet, 1))
+	# heatmap!(limb_crop[:, :, z_flow], colormap=(:jet, 1))
+	  
+    Colorbar(f[1, 2], colormap=:jet,
       flipaxis=false)
     f
   end
+end
+
+# ╔═╡ d233354a-4962-4fe2-a1db-fd4f7856cc3d
+begin
+	idxs = findall(!isnan, flow_map_nans)
+	vals = flow_map_nans[idxs]
 end
 
 # ╔═╡ 1befeeba-40bb-4310-8441-6609fc82dc21
@@ -683,37 +743,46 @@ md"""
 """
 
 # ╔═╡ c0dcbc56-be6e-47ba-b3e8-9f12ec469e4b
-col_names = [
-  "perfusion",
-  "perfusion_std",
-  "perfusion_ref",
-  "flow",
-  "flow_std",
-  "delta_time",
-  "mass",
-  "delta_hu",
-  "heart_rate",
-]
+# ╠═╡ disabled = true
+#=╠═╡
+# col_names = [
+#   "perfusion",
+#   "perfusion_std",
+#   "perfusion_ref",
+#   "flow",
+#   "flow_std",
+#   "delta_time",
+#   "mass",
+#   "delta_hu",
+#   "heart_rate",
+# ]
+  ╠═╡ =#
 
 # ╔═╡ e79e2a10-78d0-4571-b601-daf9d164b0c9
-if aif1_ready && aif2_ready
-  col_vals = [
-    perf[1],
-    perf[2],
-    length(perf) == 3 ? perf[3] : missing,
-    perf[1] * organ_mass,
-    perf[2] * organ_mass,
-    delta_time,
-    organ_mass,
-    delta_hu,
-    heart_rate,
-  ]
-end
+# ╠═╡ disabled = true
+#=╠═╡
+# if aif1_ready && aif2_ready
+#   col_vals = [
+#     perf[1],
+#     perf[2],
+#     length(perf) == 3 ? perf[3] : missing,
+#     perf[1] * organ_mass,
+#     perf[2] * organ_mass,
+#     delta_time,
+#     organ_mass,
+#     delta_hu,
+#     heart_rate,
+#   ]
+# end
+  ╠═╡ =#
 
 # ╔═╡ a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
-if aif1_ready && aif2_ready
-  df = DataFrame(parameters=col_names, values=col_vals)
-end
+# ╠═╡ disabled = true
+#=╠═╡
+# if aif1_ready && aif2_ready
+#   df = DataFrame(parameters=col_names, values=col_vals)
+# end
+  ╠═╡ =#
 
 # ╔═╡ 2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 md"""
@@ -724,6 +793,9 @@ md"""
 md"""
 ## Show 3D Limb Image
 """
+
+# ╔═╡ 133a943e-12ec-4dc2-ae0f-4787a0f9cfe3
+# heatmap(flow_map[:, :, 100])
 
 # ╔═╡ 33f165bd-44f1-4d96-8b6b-7856d384ccd8
 begin
@@ -744,13 +816,7 @@ end;
 # ╔═╡ 17c4a90a-b9fe-459d-9914-4aae6295c6e2
 flow_render_min, flow_render_max = minimum(flow_render), maximum(flow_render)
 
-# ╔═╡ 1a01913d-2462-4fef-b0e1-f764312e29ee
-flow_min, flow_max = minimum(flow_map), maximum(flow_map)
-
-# ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
-v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
-
-# ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
+# ╔═╡ e2c6214e-e953-42da-b94d-d8cd2695b2f1
 let
   fig = Figure(resolution=(1200, 1000))
 
@@ -777,22 +843,22 @@ let
 
   # control colormap
   Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
-  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=5000)
-  colorrange_max = Observable(5000)
+  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:flow_render_max, startvalue=300)
+  colorrange_max = Observable(300)
   on(slider_max.value) do c
-    colorrange_max[] = c
-    update_colorrange()
+	colorrange_max[] = c
+	update_colorrange()
   end
-
+	
   Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
   slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
   colorrange_min = Observable(0)
   on(slider_min.value) do c
     colorrange_min[] = c
-    update_colorrange()
+	update_colorrange()
   end
 
-  colorrange = Observable((0, 5000))
+  colorrange = Observable((0, 300))
   function update_colorrange()
     colorrange[] = (colorrange_min[], colorrange_max[])
   end
@@ -811,33 +877,209 @@ let
 
   GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
-    colorrange=colorrange,
+	colorrange=colorrange,
+    # algorithm=:absorption,
+	# isovalue=0,
+	# isorange=3000,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
-  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-    colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
-  )
+ #  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
+ #    colormap=combined_colormap,
+	# colorrange=colorrange,
+ #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    transparency=true
+ #  )
 
-  Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+  Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 300))
 
-  button = GLMakie.Button(fig[6, 1], label="Download Image")
+  button = GLMakie.Button(fig[6, 1], label = "Download Image")
 
   on(button.clicks) do n
-    save("output.raw", fig)
+	save("output.raw", fig)
   end
-
+	
   fig
   display(fig)
 end
+
+# ╔═╡ 1a01913d-2462-4fef-b0e1-f764312e29ee
+# flow_min, flow_max = minimum(flow_map), maximum(flow_map)
+
+# ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
+# v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
+
+# ╔═╡ 53bdc885-e932-4129-92bc-9a87eb075577
+ # heatmap(flow_map_nans[:, :, z_flow], colormap=(:jet, 0.6))
+
+# ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
+# let
+#   fig = Figure(resolution=(1200, 1000))
+
+#   # control azimuth
+#   Label(fig[0, 1], "Azimuth", justification=:left, lineheight=1)
+#   azimuth = GLMakie.Slider(fig[0, 2:3], range=0:0.01:1, startvalue=0.69)
+#   azimuth_slice = lift(azimuth.value) do a
+#     a * pi
+#   end
+
+#   # control elevation
+#   Label(fig[1, 1], "Elevation", justification=:left, lineheight=1)
+#   elevation = GLMakie.Slider(fig[1, 2:3], range=0:0.01:1, startvalue=0.18)
+#   elevation_slice = lift(elevation.value) do e
+#     e * pi
+#   end
+
+#   # control elevation
+#   Label(fig[2, 1], "Perspectiveness", justification=:left, lineheight=1)
+#   perspectiveness = GLMakie.Slider(fig[2, 2:3], range=0:0.01:1, startvalue=0.5)
+#   perspectiveness_slice = lift(perspectiveness.value) do p
+#     p
+#   end
+
+#   # control colormap
+#   Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
+#   slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=300)
+#   colorrange_max = Observable(300)
+#   on(slider_max.value) do c
+# 	colorrange_max[] = c
+# 	update_colorrange()
+#   end
+	
+#   Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
+#   slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
+#   colorrange_min = Observable(0)
+#   on(slider_min.value) do c
+#     colorrange_min[] = c
+# 	update_colorrange()
+#   end
+
+#   colorrange = Observable((0, 300))
+#   function update_colorrange()
+#     colorrange[] = (colorrange_min[], colorrange_max[])
+#   end
+
+#   jet_colors = ColorSchemes.jet.colors
+#   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
+
+
+#   # render picture
+#   ax = GLMakie.Axis3(fig[5, 1:2];
+#     perspectiveness=perspectiveness_slice,
+#     azimuth=azimuth_slice,
+#     elevation=elevation_slice,
+#     aspect=(1, 1, 1)
+#   )
+
+#   GLMakie.volume!(ax, flow_map_nans[end:-1:1, end:-1:1, end:-1:1];
+#     colormap=combined_colormap,
+# 	colorrange=colorrange,
+#     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+#     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+#     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+#     transparency=true
+#   )
+
+#  #  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
+#  #    colormap=combined_colormap,
+# 	# colorrange=colorrange,
+#  #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+#  #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+#  #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+#  #    transparency=true
+#  #  )
+
+#   Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+
+#   button = GLMakie.Button(fig[6, 1], label = "Download Image")
+
+#   on(button.clicks) do n
+# 	save("output.raw", fig)
+#   end
+	
+#   fig
+#   display(fig)
+# end
+
+# ╔═╡ 97c601e0-7f20-4112-b526-4f1509ce168f
+md"""
+## Extend to any 3D data
+"""
+
+# ╔═╡ 21b31afd-a099-45ef-9bcd-9c61b7b293f9
+# md"""
+# **Enter 3D Data File**
+
+# Input the name of the file that needs to be 3D shown. Then click submit。
+
+# $(@bind visulaztion_file confirm(PlutoUI.TextField(60; default = "/Users/harryxiong24/Code/Lab/perfusion/limb/pred.jld2")))
+# """
+
+# ╔═╡ 0dcf9e76-1cd2-403a-b92c-a2679ed5ebf4
+# let
+#   @load visulaztion_file ŷ
+#   min, max = minimum(ŷ), maximum(ŷ)
+#   f = Figure(resolution=(1200, 1000))
+
+#   # control azimuth
+#   Label(f[0, 1], "Azimuth", justification=:left, lineheight=1)
+#   azimuth = GLMakie.Slider(f[0, 2:3], range=0:0.01:1, startvalue=0.69)
+#   azimuth_slice = lift(azimuth.value) do a
+#     a * pi
+#   end
+
+#   # control elevation
+#   Label(f[1, 1], "Elevation", justification=:left, lineheight=1)
+#   elevation = GLMakie.Slider(f[1, 2:3], range=0:0.01:1, startvalue=0.18)
+#   elevation_slice = lift(elevation.value) do e
+#     e * pi
+#   end
+
+#   # control elevation
+#   Label(f[2, 1], "Perspectiveness", justification=:left, lineheight=1)
+#   perspectiveness = GLMakie.Slider(f[2, 2:3], range=0:0.01:1, startvalue=0.5)
+#   perspectiveness_slice = lift(perspectiveness.value) do p
+#     p
+#   end
+
+#   # control colormap
+#   Label(f[3, 1], "Color Slider", justification=:left, lineheight=1)
+#   colormap = Observable(to_colormap(:jet))
+#   slider = GLMakie.Slider(f[3, 2:3], range=0:1:8, startvalue=0)
+#   on(slider.value) do c
+#     new_colormap = to_colormap(:jet)
+#     for i in 1:c
+#       new_colormap[i] = RGBAf(0, 0, 0, 0)
+#     end
+#     colormap[] = new_colormap
+#   end
+
+#   # render picture
+#   ax = GLMakie.Axis3(f[4, 1:2];
+#     perspectiveness=perspectiveness_slice,
+#     azimuth=azimuth_slice,
+#     elevation=elevation_slice,
+#     aspect=(1, 1, 1)
+#   )
+
+#   GLMakie.volume!(ax, ŷ;
+#     colormap=colormap,
+#     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+#     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+#     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+#     transparency=true
+#   )
+
+#   Colorbar(f[4, 3], colormap=:jet, colorrange=(min, max), flipaxis=false)
+
+#   f
+#   display(f)
+# end
 
 # ╔═╡ Cell order:
 # ╠═eeba971b-c64e-4195-95ca-5cf2ae5ac590
@@ -902,7 +1144,7 @@ end
 # ╟─0fbad88e-7598-4416-ba4f-caab5af09bbb
 # ╟─c966dfc6-3117-4d76-9e12-129e05bbf68a
 # ╠═906f9427-4757-44d9-a957-2efd4b7f53f0
-# ╟─84ccac14-41a5-491f-a88d-d364c6d43a2f
+# ╠═84ccac14-41a5-491f-a88d-d364c6d43a2f
 # ╟─5eb279b5-348f-4c00-bad2-c40f545739be
 # ╠═7f1b44c5-924b-4541-8fff-e1298f9a9ef0
 # ╠═0955548a-62a4-4523-a526-bd123092a03a
@@ -912,16 +1154,29 @@ end
 # ╠═022fc5c7-9488-4717-9fd5-5b3dec04bb88
 # ╟─1e21f95a-bc8a-492f-9a56-820dd3b3d066
 # ╟─0ba3a947-23be-49ca-ac2c-b0d295d096e9
-# ╠═61604f83-e5f3-4aed-ac0b-1c630d7a1d67
-# ╟─e385d115-47e4-4a59-a6d0-6ea95455e901
-# ╠═e87721fa-5731-4a3e-bd8d-a17dc8fdeffc
-# ╠═fc43feee-9d9a-4af6-a76a-7dfbb927c0ae
-# ╟─c44b2487-bcd2-43f2-af89-2e3b0e1a54e8
+# ╠═b69f4afd-56a4-462a-a803-c62b5695b84c
+# ╠═70588135-9388-432c-b2c8-6824a42603b1
+# ╟─d6b854f2-e24a-42e9-8473-03723c56b103
+# ╠═31e15ab9-1445-4ec7-a417-99fdb6b9b0c5
+# ╠═3a47e743-8404-44d8-8a4e-0d617eee74b8
+# ╟─f54b5c69-a9dd-4629-ba9f-1eb34ae468a9
+# ╟─ef1e70ab-0b92-4c3f-b057-1d2f9ba57dd9
+# ╠═da1b7a69-5bfb-4515-88b7-1858ef4e05ef
+# ╠═009ffffc-2c9d-430d-978a-9e3e1b17801a
+# ╠═2b7bdc26-77d2-4068-be2d-bb1170f20648
 # ╟─5aecb6b9-a813-4cf8-8a7f-2da4a19a052e
 # ╟─d90057db-c68d-4b70-9247-1098bf129783
 # ╠═140c1343-2a6e-4d4f-a3db-0d608d7e885c
+# ╠═216e95d5-f2b8-4620-a889-7d805933dff4
+# ╠═c7600cd1-4b0b-44c2-b645-e41f11282d42
+# ╠═1eef4684-992f-45c5-863f-76bdc7671357
+# ╠═dcb499d4-ee8d-4fb3-ae0e-31aec462fa0e
 # ╟─a2aeaa04-3097-4dd0-8bab-5c98b74514b3
 # ╠═283c0ee5-0321-4f5d-9792-d593f49cafc1
+# ╠═8a5ac63f-b5c1-459d-ac93-3eb9d5312185
+# ╠═e2c6214e-e953-42da-b94d-d8cd2695b2f1
+# ╠═d233354a-4962-4fe2-a1db-fd4f7856cc3d
+# ╠═c7235626-212c-4ba8-a55a-7572abea4b8c
 # ╠═f8f3dafc-0fa4-4d11-b301-89d20adf77f3
 # ╟─1befeeba-40bb-4310-8441-6609fc82dc21
 # ╠═c0dcbc56-be6e-47ba-b3e8-9f12ec469e4b
@@ -929,8 +1184,13 @@ end
 # ╠═a861ded4-dbcf-4f06-a1b4-17d8f8ddf214
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
+# ╠═133a943e-12ec-4dc2-ae0f-4787a0f9cfe3
 # ╠═33f165bd-44f1-4d96-8b6b-7856d384ccd8
 # ╠═17c4a90a-b9fe-459d-9914-4aae6295c6e2
 # ╠═1a01913d-2462-4fef-b0e1-f764312e29ee
 # ╠═f8e96518-be85-4158-b751-d0dbfe0b44d7
+# ╠═53bdc885-e932-4129-92bc-9a87eb075577
 # ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
+# ╟─97c601e0-7f20-4112-b526-4f1509ce168f
+# ╠═21b31afd-a099-45ef-9bcd-9c61b7b293f9
+# ╠═0dcf9e76-1cd2-403a-b92c-a2679ed5ebf4
