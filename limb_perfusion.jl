@@ -431,7 +431,7 @@ Choose y location: $(@bind y1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = t
 
 Choose radius: $(@bind r1_aif PlutoUI.Slider(1:10, show_value = true, default = 7))
 
-Check box when ready: $(@bind aif1_ready PlutoUI.CheckBox(default = true))
+Check box when ready: $(@bind aif1_ready PlutoUI.CheckBox(default = false))
 """
 
 # ╔═╡ 5eb279b5-348f-4c00-bad2-c40f545739be
@@ -525,19 +525,19 @@ md"""
 """
 
 # ╔═╡ f54b5c69-a9dd-4629-ba9f-1eb34ae468a9
-@bind offset PlutoUI.Slider(0:0.5:10, show_value = true, default = 5)
+@bind offset PlutoUI.Slider(0:0.5:10, show_value=true, default=5)
 
 # ╔═╡ b69f4afd-56a4-462a-a803-c62b5695b84c
 if aif1_ready && aif2_ready
-	time_vector_ss = scan_time_vector(dcms_ss) .+ offset
-	time_vector_ss_rel = time_vector_ss .- time_vector_ss[1]
+  time_vector_ss = scan_time_vector(dcms_ss) .+ offset
+  time_vector_ss_rel = time_vector_ss .- time_vector_ss[1]
 
-	time_vector_v2 = scan_time_vector(dcms_v2)
-	time_vector_v2_rel = time_vector_v2 .- time_vector_v2[1]
+  time_vector_v2 = scan_time_vector(dcms_v2)
+  time_vector_v2_rel = time_vector_v2 .- time_vector_v2[1]
 
-	delta_time = time_vector_v2[length(time_vector_v2) ÷ 2] - time_vector_ss[end]
+  delta_time = time_vector_v2[length(time_vector_v2)÷2] - time_vector_ss[end]
 
-	time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
+  time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
 end
 
 # ╔═╡ 70588135-9388-432c-b2c8-6824a42603b1
@@ -545,67 +545,67 @@ delta_time
 
 # ╔═╡ 31e15ab9-1445-4ec7-a417-99fdb6b9b0c5
 if aif1_ready && aif2_ready
-	# Upper and Lower Bounds
-	lb = [-100.0, 0.0]
-	ub = [100.0, 200.0]
+  # Upper and Lower Bounds
+  lb = [-100.0, 0.0]
+  ub = [100.0, 200.0]
 
-	baseline_hu = mean(aif_vec_gamma[1:3])
-	p0 = [0.0, baseline_hu]  # Initial guess (0, blood pool offset)
+  baseline_hu = mean(aif_vec_gamma[1:3])
+  p0 = [0.0, baseline_hu]  # Initial guess (0, blood pool offset)
 
-	time_vec_end, aif_vec_end = time_vec_gamma[end], aif_vec_gamma[end]
+  time_vec_end, aif_vec_end = time_vec_gamma[end], aif_vec_gamma[end]
 
-	fit = gamma_curve_fit(time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0; lower_bounds = lb, upper_bounds = ub)
-	opt_params = fit.param
+  fit = gamma_curve_fit(time_vec_gamma, aif_vec_gamma, time_vec_end, aif_vec_end, p0; lower_bounds=lb, upper_bounds=ub)
+  opt_params = fit.param
 end
 
 # ╔═╡ 3a47e743-8404-44d8-8a4e-0d617eee74b8
 if aif1_ready && aif2_ready
-	x_fit = range(start = minimum(time_vec_gamma), stop = maximum(time_vec_gamma), length=500)
-	y_fit = gamma(x_fit, opt_params, time_vec_end, aif_vec_end)
-	dense_y_fit_adjusted = max.(y_fit .- baseline_hu, 0)
+  x_fit = range(start=minimum(time_vec_gamma), stop=maximum(time_vec_gamma), length=500)
+  y_fit = gamma(x_fit, opt_params, time_vec_end, aif_vec_end)
+  dense_y_fit_adjusted = max.(y_fit .- baseline_hu, 0)
 
-	area_under_curve = trapz(x_fit, dense_y_fit_adjusted)
-	times = collect(range(time_vec_gamma[1], stop=time_vec_end, length=round(Int, maximum(time_vec_gamma))))
-	
-	input_conc = area_under_curve ./ (time_vec_gamma[19] - times[4])
-	if length(aif_vec_gamma) > 2
-		input_conc = mean([aif_vec_gamma[end], aif_vec_gamma[end-1]])
-	end
+  area_under_curve = trapz(x_fit, dense_y_fit_adjusted)
+  times = collect(range(time_vec_gamma[1], stop=time_vec_end, length=round(Int, maximum(time_vec_gamma))))
+
+  input_conc = area_under_curve ./ (time_vec_gamma[19] - times[4])
+  if length(aif_vec_gamma) > 2
+    input_conc = mean([aif_vec_gamma[end], aif_vec_gamma[end-1]])
+  end
 end
 
 # ╔═╡ ef1e70ab-0b92-4c3f-b057-1d2f9ba57dd9
 if aif1_ready && aif2_ready
-	let
-		f = Figure()
-		ax = Axis(
-			f[1, 1],
-			xlabel = "Time Point",
-			ylabel = "Intensity (HU)",
-			title = "Fitted AIF Curve"
-		)
-		
-		scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
-		lines!(x_fit, y_fit, label="Fitted Curve", color = :red)
-		scatter!(time_vec_gamma[end-1], aif_vec_gamma[end-1], label = "Trigger")
-		scatter!(time_vec_gamma[end], aif_vec_gamma[end], label = "V2")
-		
-		axislegend(ax, position=:lt)
-	
-		# Create the AUC plot
-		time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
-		auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
-		
-		# Create a denser AUC plot
-		n_points = 1000  # Number of points for denser interpolation
-		time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
-		auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
-	
-		for i = 1:length(auc_area_dense)
-		    lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
-		end
-	
-		f
-	end
+  let
+    f = Figure()
+    ax = Axis(
+      f[1, 1],
+      xlabel="Time Point",
+      ylabel="Intensity (HU)",
+      title="Fitted AIF Curve"
+    )
+
+    scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
+    lines!(x_fit, y_fit, label="Fitted Curve", color=:red)
+    scatter!(time_vec_gamma[end-1], aif_vec_gamma[end-1], label="Trigger")
+    scatter!(time_vec_gamma[end], aif_vec_gamma[end], label="V2")
+
+    axislegend(ax, position=:lt)
+
+    # Create the AUC plot
+    time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
+    auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+
+    # Create a denser AUC plot
+    n_points = 1000  # Number of points for denser interpolation
+    time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
+    auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+
+    for i = 1:length(auc_area_dense)
+      lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
+    end
+
+    f
+  end
 end
 
 # ╔═╡ da1b7a69-5bfb-4515-88b7-1858ef4e05ef
@@ -747,8 +747,8 @@ begin
       for k in axes(flow_map_nans, 3)
         if isnan(flow_map_nans[i, j, k]) || iszero(flow_map_nans[i, j, k])
           flow_map_render[i, j, k] = flow_map_nans_min
-		else
-		  flow_map_render[i, j, k] = flow_map_nans[i, j, k]
+        else
+          flow_map_render[i, j, k] = flow_map_nans[i, j, k]
         end
       end
     end
@@ -785,16 +785,16 @@ let
   slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:flow_map_nans_max, startvalue=300)
   colorrange_max = Observable(300)
   on(slider_max.value) do c
-	colorrange_max[] = c
-	update_colorrange()
+    colorrange_max[] = c
+    update_colorrange()
   end
-	
+
   Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
   slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
   colorrange_min = Observable(0)
   on(slider_min.value) do c
     colorrange_min[] = c
-	update_colorrange()
+    update_colorrange()
   end
 
   colorrange = Observable((0, 300))
@@ -813,33 +813,33 @@ let
     elevation=elevation_slice,
     aspect=(1, 1, 1)
   )
-	
+
   GLMakie.volume!(ax, flow_map_render[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
-	colorrange=colorrange,
+    colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
     transparency=true
   )
 
- #  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
- #    colormap=combined_colormap,
- # colorrange=colorrange,
- #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
- #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
- #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
- #    transparency=true
- #  )
+  #  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
+  #    colormap=combined_colormap,
+  # colorrange=colorrange,
+  #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+  #    transparency=true
+  #  )
 
   Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(flow_map_nans_min, flow_map_nans_max))
 
-  button = GLMakie.Button(fig[6, 1], label = "Download Image")
+  button = GLMakie.Button(fig[6, 1], label="Download Image")
 
   on(button.clicks) do n
-	save("output.raw", fig)
+    save("output.raw", fig)
   end
-	
+
   fig
   display(fig)
 end
@@ -906,9 +906,9 @@ end
 # ╠═049e8a67-6237-43c0-9adc-c5dfe7e4d03f
 # ╟─0fbad88e-7598-4416-ba4f-caab5af09bbb
 # ╟─c966dfc6-3117-4d76-9e12-129e05bbf68a
-# ╠═906f9427-4757-44d9-a957-2efd4b7f53f0
+# ╟─906f9427-4757-44d9-a957-2efd4b7f53f0
 # ╟─84ccac14-41a5-491f-a88d-d364c6d43a2f
-# ╟─5eb279b5-348f-4c00-bad2-c40f545739be
+# ╠═5eb279b5-348f-4c00-bad2-c40f545739be
 # ╠═7f1b44c5-924b-4541-8fff-e1298f9a9ef0
 # ╠═0955548a-62a4-4523-a526-bd123092a03a
 # ╠═e9dad16b-07bc-4b87-be6b-959b078a5ba7
