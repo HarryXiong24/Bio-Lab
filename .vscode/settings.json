@@ -1,5 +1,4 @@
 {
   "editor.formatOnPaste": true,
-  // 保存自动化
   "editor.formatOnSave": true
 }
