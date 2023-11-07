@@ -788,18 +788,22 @@ let
   # control colormap top
   Label(fig[3, 1], "Color Range Max Top Half", justification=:left, lineheight=1)
   slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:halfz_top_max, startvalue=300)
+  slider_max_label = Label(fig[3, 4], text = "$(slider_max)")
   colorrange_max = Observable(300)
   on(slider_max.value) do c
     colorrange_max[] = c
     update_colorrange()
+	slider_max_label.text = "$c"
   end
 
   Label(fig[4, 1], "Color Range Min Top Half", justification=:left, lineheight=1)
   slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
+  slider_min_label = Label(fig[4, 4], text = "$(slider_min)")
   colorrange_min = Observable(0)
   on(slider_min.value) do c
     colorrange_min[] = c
     update_colorrange()
+	slider_min_label.text = "$c"
   end
 
   colorrange = Observable((0, 300))
@@ -807,25 +811,28 @@ let
     colorrange[] = (colorrange_min[], colorrange_max[])
   end
 
-  # color
   jet_colors = ColorSchemes.jet.colors
   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
   # control colormap bottom
   Label(fig[5, 1], "Color Range Max Bottom Half", justification=:left, lineheight=1)
   slider_max_bottom = GLMakie.Slider(fig[5, 2:3], range=0:10:halfz_bottom_max, startvalue=300)
+  slider_max_botton_label = Label(fig[5, 4], text = "$(slider_max_bottom)")
   colorrange_max_bottom = Observable(300)
   on(slider_max_bottom.value) do c
     colorrange_max_bottom[] = c
     update_colorrange_bottom()
+	slider_max_botton_label.text = "$c"
   end
 
   Label(fig[6, 1], "Color Range Min Bottom Half", justification=:left, lineheight=1)
   slider_min_bottom = GLMakie.Slider(fig[6, 2:3], range=-1000:10:0, startvalue=0)
+  slider_min_botton_label = Label(fig[6, 4], text = "$(slider_min_bottom)")
   colorrange_min_bottom = Observable(0)
   on(slider_min_bottom.value) do c
     colorrange_min_bottom[] = c
     update_colorrange_bottom()
+	slider_min_botton_label.text = "$c"
   end
 
   colorrange_bottom = Observable((0, 300))
@@ -833,7 +840,6 @@ let
     colorrange_bottom[] = (colorrange_min_bottom[], colorrange_max_bottom[])
   end
 
-  # bottom color
   jet_colors = ColorSchemes.jet.colors
   combined_colormap_bottom = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
