@@ -730,12 +730,6 @@ md"""
 ## Show 3D Limb Image
 """
 
-# ╔═╡ 1a01913d-2462-4fef-b0e1-f764312e29ee
-# flow_min, flow_max = minimum(flow_map), maximum(flow_map)
-
-# ╔═╡ f8e96518-be85-4158-b751-d0dbfe0b44d7
-# v2_reg_min, v2_reg_max = minimum(v2_reg), maximum(v2_reg)
-
 # ╔═╡ bd42a23d-6837-400f-b97e-6660f84b5c09
 begin
   idxs = findall(!isnan, flow_map_nans)
@@ -753,6 +747,22 @@ begin
       end
     end
   end
+end
+
+# ╔═╡ a3d5b07f-6e51-40b7-9189-49bd6e81bc11
+begin
+  halfz_bottom_flow_map_render = deepcopy(flow_map_render)
+  mid_point_z2 = size(halfz_bottom_flow_map_render, 3) ÷ 2
+  halfz_bottom_flow_map_render[:, :, 1:mid_point_z2] .= 0
+  halfz_bottom_min, halfz_bottom_max = minimum(halfz_bottom_flow_map_render), maximum(halfz_bottom_flow_map_render)
+end
+
+# ╔═╡ b8d9329c-c81b-40a6-a973-963170ad71e2
+begin
+  halfz_top_flow_map_render = deepcopy(flow_map_render)
+  mid_point_z1 = size(halfz_top_flow_map_render, 3) ÷ 2 
+  halfz_top_flow_map_render[:, :, mid_point_z1:end] .= 0
+  halfz_top_min, halfz_top_max = minimum(halfz_top_flow_map_render), maximum(halfz_top_flow_map_render)
 end
 
 # ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
@@ -780,16 +790,16 @@ let
     p
   end
 
-  # control colormap
-  Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
-  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:flow_map_nans_max, startvalue=300)
+  # control colormap top
+  Label(fig[3, 1], "Color Range Max Top Half", justification=:left, lineheight=1)
+  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:halfz_top_max, startvalue=300)
   colorrange_max = Observable(300)
   on(slider_max.value) do c
     colorrange_max[] = c
     update_colorrange()
   end
 
-  Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
+  Label(fig[4, 1], "Color Range Min Top Half", justification=:left, lineheight=1)
   slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
   colorrange_min = Observable(0)
   on(slider_min.value) do c
@@ -802,25 +812,60 @@ let
     colorrange[] = (colorrange_min[], colorrange_max[])
   end
 
+  # color
   jet_colors = ColorSchemes.jet.colors
   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
+  # control colormap bottom
+  Label(fig[5, 1], "Color Range Max Bottom Half", justification=:left, lineheight=1)
+  slider_max_bottom = GLMakie.Slider(fig[5, 2:3], range=0:10:halfz_bottom_max, startvalue=300)
+  colorrange_max_bottom = Observable(300)
+  on(slider_max_bottom.value) do c
+    colorrange_max_bottom[] = c
+    update_colorrange()
+  end
+
+  Label(fig[6, 1], "Color Range Min Bottom Half", justification=:left, lineheight=1)
+  slider_min_bottom = GLMakie.Slider(fig[6, 2:3], range=-1000:10:0, startvalue=0)
+  colorrange_min_bottom = Observable(0)
+  on(slider_min_bottom.value) do c
+    colorrange_min_bottom[] = c
+    update_colorrange_bottom()
+  end
+
+  colorrange_bottom = Observable((0, 300))
+  function update_colorrange_bottom()
+    colorrange_bottom[] = (colorrange_min_bottom[], colorrange_max_bottom[])
+  end
+
+  # bottom color
+  jet_colors = ColorSchemes.jet.colors
+  combined_colormap_bottom = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
   # render picture
-  ax = GLMakie.Axis3(fig[5, 1:2];
+  ax = GLMakie.Axis3(fig[7, 1:2];
     perspectiveness=perspectiveness_slice,
     azimuth=azimuth_slice,
     elevation=elevation_slice,
     aspect=(1, 1, 1)
   )
 
-  GLMakie.volume!(ax, flow_map_render[end:-1:1, end:-1:1, end:-1:1];
+  GLMakie.volume!(ax, halfz_top_flow_map_render[end:-1:1, end:-1:1, end:-1:1];
     colormap=combined_colormap,
     colorrange=colorrange,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
+    transparency=false
+  )
+
+  GLMakie.volume!(ax, halfz_bottom_flow_map_render[end:-1:1, end:-1:1, end:-1:1];
+    colormap=combined_colormap_bottom,
+    colorrange=colorrange_bottom,
+    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+    transparency=false
   )
 
   #  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
@@ -832,9 +877,9 @@ let
   #    transparency=true
   #  )
 
-  Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(flow_map_nans_min, flow_map_nans_max))
+  Colorbar(fig[7, 3], colormap=combined_colormap, flipaxis=false, colorrange=(flow_map_nans_min, flow_map_nans_max))
 
-  button = GLMakie.Button(fig[6, 1], label="Download Image")
+  button = GLMakie.Button(fig[8, 1], label="Download Image")
 
   on(button.clicks) do n
     save("output.raw", fig)
@@ -939,7 +984,7 @@ end
 # ╠═283c0ee5-0321-4f5d-9792-d593f49cafc1
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
-# ╠═1a01913d-2462-4fef-b0e1-f764312e29ee
-# ╠═f8e96518-be85-4158-b751-d0dbfe0b44d7
 # ╠═bd42a23d-6837-400f-b97e-6660f84b5c09
+# ╠═a3d5b07f-6e51-40b7-9189-49bd6e81bc11
+# ╠═b8d9329c-c81b-40a6-a973-963170ad71e2
 # ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
