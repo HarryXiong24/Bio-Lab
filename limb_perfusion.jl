@@ -751,18 +751,13 @@ end
 
 # ╔═╡ a3d5b07f-6e51-40b7-9189-49bd6e81bc11
 begin
-  halfz_bottom_flow_map_render = deepcopy(flow_map_render)
-  mid_point_z2 = size(halfz_bottom_flow_map_render, 3) ÷ 2
-  halfz_bottom_flow_map_render[:, :, 1:mid_point_z2] .= 0
-  halfz_bottom_min, halfz_bottom_max = minimum(halfz_bottom_flow_map_render), maximum(halfz_bottom_flow_map_render)
-end
-
-# ╔═╡ b8d9329c-c81b-40a6-a973-963170ad71e2
-begin
   halfz_top_flow_map_render = deepcopy(flow_map_render)
-  mid_point_z1 = size(halfz_top_flow_map_render, 3) ÷ 2 
-  halfz_top_flow_map_render[:, :, mid_point_z1:end] .= 0
+  halfz_bottom_flow_map_render = deepcopy(flow_map_render)
+  mid_point_z = size(flow_map_render, 3) ÷ 2
+  halfz_top_flow_map_render[:, :, mid_point_z:end] .= flow_map_nans_min
   halfz_top_min, halfz_top_max = minimum(halfz_top_flow_map_render), maximum(halfz_top_flow_map_render)
+  halfz_bottom_flow_map_render[:, :, 1:mid_point_z-1] .= flow_map_nans_min
+  halfz_bottom_min, halfz_bottom_max = minimum(halfz_bottom_flow_map_render), maximum(halfz_bottom_flow_map_render)
 end
 
 # ╔═╡ 073847ae-0b88-4a4d-8fbd-083c09f639ce
@@ -822,7 +817,7 @@ let
   colorrange_max_bottom = Observable(300)
   on(slider_max_bottom.value) do c
     colorrange_max_bottom[] = c
-    update_colorrange()
+    update_colorrange_bottom()
   end
 
   Label(fig[6, 1], "Color Range Min Bottom Half", justification=:left, lineheight=1)
@@ -856,7 +851,8 @@ let
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=false
+    transparency=false,
+    overdraw=true,
   )
 
   GLMakie.volume!(ax, halfz_bottom_flow_map_render[end:-1:1, end:-1:1, end:-1:1];
@@ -865,7 +861,8 @@ let
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=false
+    transparency=false,
+    overdraw=true,
   )
 
   #  GLMakie.volume!(ax, v2_reg[end:-1:1, end:-1:1, end:-1:1];
@@ -986,5 +983,4 @@ end
 # ╟─4265f600-d744-49b1-9225-d284b2c947af
 # ╠═bd42a23d-6837-400f-b97e-6660f84b5c09
 # ╠═a3d5b07f-6e51-40b7-9189-49bd6e81bc11
-# ╠═b8d9329c-c81b-40a6-a973-963170ad71e2
 # ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
