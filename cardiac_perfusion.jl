@@ -1077,11 +1077,6 @@ md"""
 # Visualiazation
 """
 
-# ╔═╡ 4265f600-d744-49b1-9225-d284b2c947af
-md"""
-## Show 3D Limb Image
-"""
-
 # ╔═╡ a995e44c-4c3b-4bfb-ad78-9ae33e4726ec
 begin
   flow_render_left = zeros(size(flow_map_left_nans))
@@ -1145,21 +1140,25 @@ let
     p
   end
 
-  # control colormap
-  Label(fig[3, 1], "Color Range Max", justification=:left, lineheight=1)
-  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:10000, startvalue=5000)
+  # control Left Myocardium
+  Label(fig[3, 1], "Color Range Max Left Myocardium", justification=:left, lineheight=1)
+  slider_max = GLMakie.Slider(fig[3, 2:3], range=0:10:flow_render_left_max, startvalue=5000)
+  slider_max_left_label = Label(fig[3, 4], text = "$(slider_max)")
   colorrange_max = Observable(5000)
   on(slider_max.value) do c
 	colorrange_max[] = c
 	update_colorrange()
+	slider_max_left_label.text = "$c"
   end
 	
-  Label(fig[4, 1], "Color Range Min", justification=:left, lineheight=1)
-  slider_min = GLMakie.Slider(fig[4, 2:3], range=-10000:10:0, startvalue=0)
+  Label(fig[4, 1], "Color Range Min Left Myocardium", justification=:left, lineheight=1)
+  slider_min = GLMakie.Slider(fig[4, 2:3], range=-1000:10:0, startvalue=0)
+  slider_min_left_label = Label(fig[4, 4], text = "$(slider_min)")
   colorrange_min = Observable(0)
   on(slider_min.value) do c
     colorrange_min[] = c
 	update_colorrange()
+	slider_min_left_label.text = "$c"
   end
 
   colorrange = Observable((0, 5000))
@@ -1171,8 +1170,37 @@ let
   combined_colormap = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
 
+  # control right Myocardium
+  Label(fig[5, 1], "Color Range Max Right Myocardium", justification=:left, lineheight=1)
+  slider_max_right = GLMakie.Slider(fig[5, 2:3], range=0:10:flow_render_right_max, startvalue=300)
+  slider_max_right_label = Label(fig[5, 4], text = "$(slider_max_right)")
+  colorrange_max_right = Observable(300)
+  on(slider_max_right.value) do c
+    colorrange_max_right[] = c
+    update_colorrange_right()
+	slider_max_right_label.text = "$c"
+  end
+
+  Label(fig[6, 1], "Color Range Min Right Myocardium", justification=:left, lineheight=1)
+  slider_min_right = GLMakie.Slider(fig[6, 2:3], range=-1000:10:0, startvalue=0)
+  slider_min_right_label = Label(fig[6, 4], text = "$(slider_min_right)")
+  colorrange_min_right = Observable(0)
+  on(slider_min_right.value) do c
+    colorrange_min_right[] = c
+    update_colorrange_right()
+	slider_min_right_label.text = "$c"
+  end
+
+  colorrange_right = Observable((0, 300))
+  function update_colorrange_right()
+    colorrange_right[] = (colorrange_min_right[], colorrange_max_right[])
+  end
+
+  jet_colors = ColorSchemes.jet.colors
+  combined_colormap_right = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
+
   # render picture
-  ax = GLMakie.Axis3(fig[5, 1:2];
+  ax = GLMakie.Axis3(fig[7, 1:2];
     perspectiveness=perspectiveness_slice,
     azimuth=azimuth_slice,
     elevation=elevation_slice,
@@ -1185,16 +1213,18 @@ let
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
+    transparency=false,
+    overdraw=true,
   )
 
   GLMakie.volume!(ax, flow_map_right_nans[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
+    colormap=combined_colormap_right,
+	colorrange=colorrange_right,
     lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
     nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
+    transparency=false,
+    overdraw=true,
   )
 
  #  GLMakie.volume!(ax, v2_crop[end:-1:1, end:-1:1, end:-1:1];
@@ -1206,45 +1236,45 @@ let
  #    transparency=true
  #  )
 	
-  GLMakie.volume!(ax, aorta_crop[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
-  )
+ #  GLMakie.volume!(ax, aorta_crop[end:-1:1, end:-1:1, end:-1:1];
+ #    colormap=combined_colormap,
+	# colorrange=colorrange,
+ #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    transparency=true
+ #  )
 
-  GLMakie.volume!(ax, lad_crop[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
-  )
+ #  GLMakie.volume!(ax, lad_crop[end:-1:1, end:-1:1, end:-1:1];
+ #    colormap=combined_colormap,
+	# colorrange=colorrange,
+ #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    transparency=true
+ #  )
 
-  GLMakie.volume!(ax, lcx_crop[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
-  )
+ #  GLMakie.volume!(ax, lcx_crop[end:-1:1, end:-1:1, end:-1:1];
+ #    colormap=combined_colormap,
+	# colorrange=colorrange,
+ #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    transparency=true
+ #  )
 
-  GLMakie.volume!(ax, rca_crop[end:-1:1, end:-1:1, end:-1:1];
-    colormap=combined_colormap,
-	colorrange=colorrange,
-    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
-    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
-    transparency=true
-  )
+ #  GLMakie.volume!(ax, rca_crop[end:-1:1, end:-1:1, end:-1:1];
+ #    colormap=combined_colormap,
+	# colorrange=colorrange,
+ #    lowclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    highclip=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    nan_color=RGBAf(0.0, 0.0, 0.0, 0.0),
+ #    transparency=true
+ #  )
 
-  Colorbar(fig[5, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
+  Colorbar(fig[7, 3], colormap=combined_colormap, flipaxis=false, colorrange=(0, 1))
 
-  button = GLMakie.Button(fig[6, 1], label = "Download Image")
+  button = GLMakie.Button(fig[8, 1], label = "Download Image")
 
   on(button.clicks) do n
 	save("output.raw", fig)
@@ -1389,7 +1419,6 @@ end
 # ╠═a45803fa-d28a-48a2-b9f2-e1fbf730713f
 # ╠═45d6f3b3-0418-4156-a534-2cb80920f4cd
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
-# ╟─4265f600-d744-49b1-9225-d284b2c947af
 # ╠═a995e44c-4c3b-4bfb-ad78-9ae33e4726ec
 # ╠═459c6cc9-b46d-4a2c-acb0-4f2a97286fa0
 # ╠═fc27fe09-9212-4b2b-8aee-4dea5e93f608

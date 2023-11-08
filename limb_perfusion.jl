@@ -668,18 +668,6 @@ if aif1_ready && aif2_ready
   df = DataFrame(parameters=col_names, values=col_vals)
 end
 
-# ╔═╡ 216e95d5-f2b8-4620-a889-7d805933dff4
-# hist(vec(perf_map), bins = 100)
-
-# ╔═╡ c7600cd1-4b0b-44c2-b645-e41f11282d42
-# mean(vec(perf_map))
-
-# ╔═╡ 1eef4684-992f-45c5-863f-76bdc7671357
-# perf
-
-# ╔═╡ dcb499d4-ee8d-4fb3-ae0e-31aec462fa0e
-# hist(vec(flow_map))
-
 # ╔═╡ e53cec6c-6621-45cf-820e-e82750fd2544
 begin
   limb_crop_dilated = dilate(dilate(dilate(dilate(dilate(limb_crop)))))
@@ -725,12 +713,7 @@ md"""
 # Visualiazation
 """
 
-# ╔═╡ 4265f600-d744-49b1-9225-d284b2c947af
-md"""
-## Show 3D Limb Image
-"""
-
-# ╔═╡ bd42a23d-6837-400f-b97e-6660f84b5c09
+# ╔═╡ 1e878e7d-3137-4e65-bb9b-4ac3eb3180ad
 begin
   idxs = findall(!isnan, flow_map_nans)
   vals = flow_map_nans[idxs]
@@ -844,7 +827,7 @@ let
   combined_colormap_bottom = [RGBAf(0.0, 0.0, 0.0, 0.0); jet_colors[2:end]]
 
   # render picture
-  ax = GLMakie.Axis3(fig[7, 1:2];
+  ax = GLMakie.Axis3(fig[7, 1:3];
     perspectiveness=perspectiveness_slice,
     azimuth=azimuth_slice,
     elevation=elevation_slice,
@@ -880,7 +863,7 @@ let
   #    transparency=true
   #  )
 
-  Colorbar(fig[7, 3], colormap=combined_colormap, flipaxis=false, colorrange=(flow_map_nans_min, flow_map_nans_max))
+  Colorbar(fig[7, 4], colormap=combined_colormap, flipaxis=false, colorrange=(flow_map_nans_min, flow_map_nans_max))
 
   button = GLMakie.Button(fig[8, 1], label="Download Image")
 
@@ -978,15 +961,10 @@ end
 # ╟─5aecb6b9-a813-4cf8-8a7f-2da4a19a052e
 # ╟─d90057db-c68d-4b70-9247-1098bf129783
 # ╠═140c1343-2a6e-4d4f-a3db-0d608d7e885c
-# ╠═216e95d5-f2b8-4620-a889-7d805933dff4
-# ╠═c7600cd1-4b0b-44c2-b645-e41f11282d42
-# ╠═1eef4684-992f-45c5-863f-76bdc7671357
-# ╠═dcb499d4-ee8d-4fb3-ae0e-31aec462fa0e
 # ╠═e53cec6c-6621-45cf-820e-e82750fd2544
 # ╠═2d79443c-161b-462e-b8d6-33f13d16c8bd
 # ╠═283c0ee5-0321-4f5d-9792-d593f49cafc1
 # ╟─2c8c49dc-b1f5-4f55-ab8d-d3331d4ec23d
-# ╟─4265f600-d744-49b1-9225-d284b2c947af
-# ╠═bd42a23d-6837-400f-b97e-6660f84b5c09
+# ╠═1e878e7d-3137-4e65-bb9b-4ac3eb3180ad
 # ╠═a3d5b07f-6e51-40b7-9189-49bd6e81bc11
 # ╠═073847ae-0b88-4a4d-8fbd-083c09f639ce
