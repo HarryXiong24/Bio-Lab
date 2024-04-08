@@ -1,0 +1,9 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DICOM = "a26e6606-dd52-5f6a-a97f-4f611373d757"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+ImageMorphology = "787d08f9-d448-5407-9aad-5290dd7ab264"
+PerfusionImaging = "187119c3-f0c9-4846-bd2a-6fdb8a2d7639"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
