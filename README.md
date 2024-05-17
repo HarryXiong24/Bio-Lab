@@ -27,6 +27,7 @@ add package_name
 # Enter terminal at this folder and input
 julia
 
+
 # Then run:
 using Pluto; Pluto.run();
 
